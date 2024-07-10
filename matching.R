@@ -117,31 +117,38 @@ ep09_19 <- ep09_19 %>% select(row_id_2009 = row_id.x, row_id_2019 = row_id.y)
 ep09_24 <- ep09_24 %>% select(row_id_2009 = row_id.x, row_id_2024 = row_id.y)
 ep14_24 <- ep14_24 %>% select(row_id_2014 = row_id.x, row_id_2024 = row_id.y)
 
-pivot_table <- purrr::reduce(list(
-    ep04_09 %>% select(row_id_2004 = row_id.x, row_id_2009 = row_id.y) %>% 
-      bind_rows(., ep_2004 %>% select(row_id_2004 = row_id) %>% 
-                  filter(!row_id_2004 %in% ep04_09$row_id.x)),
-    ep09_14 %>% select(row_id_2009 = row_id.x, row_id_2014 = row_id.y) %>% 
-      bind_rows(., ep_2009 %>% select(row_id_2009 = row_id) %>% 
-                  filter(!row_id_2009 %in% ep09_14$row_id.x)),
-    ep14_19 %>% select(row_id_2014 = row_id.x, row_id_2019 = row_id.y) %>% 
-      bind_rows(., ep_2014 %>% select(row_id_2014 = row_id) %>% 
-                  filter(!row_id_2014 %in% ep14_19$row_id.x)),
-    ep19_24 %>% select(row_id_2019 = row_id.x, row_id_2024 = row_id.y) %>% 
-      bind_rows(., ep_2019 %>% select(row_id_2019 = row_id) %>% 
-                  filter(!row_id_2019 %in% ep19_24$row_id.x)) %>% 
-      bind_rows(., ep_2024 %>% select(row_id_2024 = row_id) %>%
-                  filter(!row_id_2024 %in% ep19_24$row_id.y))
-), ~full_join(.x, .y, na_matches = "never")) %>% 
-  insert_nonconsecutive(., ep04_14, "row_id_2004", "row_id_2014") %>% 
-  insert_nonconsecutive(., ep04_19, "row_id_2004", "row_id_2019") %>% 
-  insert_nonconsecutive(., ep04_24, "row_id_2004", "row_id_2024") %>% 
+pivot_table <- ep04_09 %>% select(row_id_2004 = row_id.x, row_id_2009 = row_id.y) %>% 
+  bind_rows(., ep_2004 %>% select(row_id_2004 = row_id) %>%
+              filter(!row_id_2004 %in% ep04_09$row_id.x)) %>% 
+  full_join(., 
+            ep09_14 %>% select(row_id_2009 = row_id.x, row_id_2014 = row_id.y) %>% 
+              bind_rows(., ep_2009 %>% select(row_id_2009 = row_id) %>%
+                          filter(!row_id_2009 %in% ep09_14$row_id.x))) %>% 
+  insert_nonconsecutive(., ep04_14, "row_id_2004", "row_id_2014") %>%
+  full_join(., 
+            ep14_19 %>% select(row_id_2014 = row_id.x, row_id_2019 = row_id.y) %>% 
+              bind_rows(., ep_2014 %>% select(row_id_2014 = row_id) %>%
+                          filter(!row_id_2014 %in% ep14_19$row_id.x))) %>% 
+  insert_nonconsecutive(., ep04_19, "row_id_2004", "row_id_2019") %>%
   insert_nonconsecutive(., ep09_19, "row_id_2009", "row_id_2019") %>% 
-  insert_nonconsecutive(., ep09_24, "row_id_2009", "row_id_2024") %>% 
-  insert_nonconsecutive(., ep14_24, "row_id_2014", "row_id_2024") %>% 
-  mutate(
-    person_id = paste0("EP", row_number()) 
+  full_join(., 
+            ep19_24 %>% select(row_id_2019 = row_id.x, row_id_2024 = row_id.y) %>% 
+              bind_rows(., ep_2019 %>% select(row_id_2019 = row_id) %>%
+                          filter(!row_id_2019 %in% ep19_24$row_id.x)),
+            by = "row_id_2019",
+            na_matches = "never"
   ) %>% 
+  insert_nonconsecutive(., ep04_24, "row_id_2004", "row_id_2024") %>%
+  insert_nonconsecutive(., ep09_24, "row_id_2009", "row_id_2024") %>%
+  insert_nonconsecutive(., ep14_24, "row_id_2014", "row_id_2024") %>% 
+  bind_rows(., ep_2024 %>% select(row_id_2024 = row_id) %>%
+              filter(!row_id_2024 %in% ep19_24$row_id.y) %>% 
+              filter(!row_id_2024 %in% c(ep04_24$row_id_2024, 
+                                         ep09_24$row_id_2024,
+                                         ep14_24$row_id_2024))) %>% 
+  mutate(person_id = paste0("EP", row_number()))
+
+pivot_table_long <- pivot_table %>% 
   tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year", 
                       values_to = "row_id") %>% 
   filter(!is.na(row_id)) %>% 
@@ -155,4 +162,6 @@ ep_candidates <- bind_rows(
   ep_2024 %>% mutate(year = "2024")
 )
 
-ep_panel <- full_join(pivot_table, ep_candidates, by = c("row_id", "year")) 
+ep_panel <- full_join(pivot_table_long, ep_candidates, by = c("row_id", "year")) 
+nrow(ep_panel)
+nrow(ep_2004) + nrow(ep_2009) + nrow(ep_2014) + nrow(ep_2019) + nrow(ep_2024)
