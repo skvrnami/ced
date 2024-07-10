@@ -310,7 +310,8 @@ ep_data <- list(
     cpp <- read_cpp_xml(here("data", "EP2004", "EP2004ciselniky", "cpp.xml"))
     cns <- read_cns_xml(here("data", "EP2004", "EP2004ciselniky", "cns.xml"))
     read_candidates_xml(here("data", "EP2004", "EP2004reg", "eprk.xml"), 
-                        parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)})
+                        parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)}) %>% 
+      mutate(ROK_NAROZENI = 2004 - VEK)
   }),
   
   tar_target(ep_2009, command = {
@@ -319,7 +320,8 @@ ep_data <- list(
     cpp <- read_cpp_xml(here("data", "EP2009", "EP2009ciselniky", "cpp.xml"))
     cns <- read_cns_xml(here("data", "EP2009", "EP2009ciselniky", "cns.xml"))
     read_candidates_xml(here("data", "EP2009", "EP2009reg", "eprk.xml"), 
-                        parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)})
+                        parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)}) %>% 
+      mutate(ROK_NAROZENI = 2009 - VEK)
   }),
   
   tar_target(ep_2014, command = {
@@ -328,7 +330,8 @@ ep_data <- list(
     cpp <- read_cpp_xml(here("data", "EP2014", "EP2014ciselniky20140425", "cpp.xml"))
     cns <- read_cns_xml(here("data", "EP2014", "EP2014ciselniky20140425", "cns.xml"))
     read_candidates_xml(here("data", "EP2014", "EP2014reg20140525", "eprk.xml"), 
-                        parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)})
+                        parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)}) %>% 
+      mutate(ROK_NAROZENI = 2014 - VEK)
   }),
   
   tar_target(ep_2019, command = {
@@ -338,7 +341,19 @@ ep_data <- list(
     cns <- read_cns(here("data", "EP2019", "EP2019ciselniky20190513", "cns.xlsx"))
     read_candidates(here("data", "EP2019", "EP2019reg20190526_xlsx", "eprk.xlsx"), 
                     parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA) %>%
-                        mutate(MANDAT = ifelse(MANDAT == "A", 1, 0))})
+                        mutate(MANDAT = ifelse(MANDAT == "A", 1, 0))}) %>% 
+      mutate(ROK_NAROZENI = 2019 - VEK)
+  }), 
+  
+  tar_target(ep_2024, command = {
+    parties <- read_parties(here("data", "EP2024", "EP2024reg20240609_xlsx", "eprkl.xlsx"), 
+                            function(x) x %>% select(KSTRANA = ESTRANA, ZKRATKAK8 = ZKRATKAE8, NAZEV_STRK = NAZEV_STRE))
+    cpp <- read_cpp(here("data", "EP2024", "EP2024ciselniky20240609", "cpp.xlsx"))
+    cns <- read_cns(here("data", "EP2024", "EP2024ciselniky20240609", "cns.xlsx"))
+    read_candidates(here("data", "EP2024", "EP2024reg20240609_xlsx", "eprk.xlsx"), 
+                    parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA) %>%
+                        mutate(MANDAT = ifelse(MANDAT == "A", 1, 0))}) %>% 
+      mutate(ROK_NAROZENI = 2024 - VEK)
   })
 )
 

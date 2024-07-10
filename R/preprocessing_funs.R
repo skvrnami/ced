@@ -275,7 +275,8 @@ parse_ep_regkand_row <- function(x){
     POCPROCVSE = extract_el_value_num(x, "pocprocvse"),
     MANDAT = extract_el_value_num(x, "mandat"),
     PORADIMAND = extract_el_value_num(x, "poradimand"),
-    PORADINAHR = extract_el_value_num(x, "poradinahr")
+    PORADINAHR = extract_el_value_num(x, "poradinahr"), 
+    POVOLANI = extract_el_value(x, "povolani")
   )
 }
 
