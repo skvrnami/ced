@@ -2,17 +2,22 @@ name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iterat
 categorize_titles|function|120168d17d9b4ae7|||||||||||||||
 clean_dbf_excel_colnames|function|9480ec742cf1aa7d|||||||||||||||
 clean_ps|function|1e94d2f643cc0e02|||||||||||||||
+cmp_within_1|function|348ed0b9f3a7ea8c|||||||||||||||
 ep_2004|stem|7751779982aed2f6|07670cb84e0a600b|f4ea4ccdeb7e8a26|378619652||t19914.740032031s|226249483786e5c7|30096|rds|local|vector|||10.39||
 ep_2009|stem|1c261e3dfb23996a|bf670c4e5bead4aa|f4ea4ccdeb7e8a26|1298019084||t19914.7401484806s|b4e6ec38099670cc|30120|rds|local|vector|||9.99||
 ep_2014|stem|e463aaaa3902d9bd|f8365166b6085ac4|f4ea4ccdeb7e8a26|-1587599466||t19914.739910859s|0036b53354a2320f|35913|rds|local|vector|||12.467||
 ep_2019|stem|5ec85142bd064641|7feffdadc48e8d0c|3745e23988b89a5e|-1407808319||t19914.7399116303s|8828a16f3a4b023e|39511|rds|local|vector|||0.052||
 ep_2024|stem|eabc95c96a1b29bf|f9b4c33040e546ed|3745e23988b89a5e|179190747||t19914.7400327469s|2a03995a6eac301c|34108|rds|local|vector|||0.049||
-ep_data|object|093720511a5409b0|||||||||||||||
+ep_data|object|afaf229377437045|||||||||||||||
+ep_panel|stem|1d090bcd822eb056|1bf4d798c7bc8158|7974e5a85c57e087|441611407||t19916.8077886274s|caddb04471c1ce0e|171546|rds|local|vector|||0.286||
+ep_panel_check|stem|95c869582cc88ef6|a43b30ba8ddd4072|df314c7774604d06|1445266258||t19916.807788684s|e255484007059372|43|rds|local|vector|||0||
 extract_el_value|function|84a37571a65b91e5|||||||||||||||
 extract_el_value_num|function|f6767672006bf13f|||||||||||||||
 extract_titles_from_last_name|function|d4bdb81e41636125|||||||||||||||
 filter_city_districts|function|ca51423bcdfb498c|||||||||||||||
 filter_municipalities|function|571414621c38b1de|||||||||||||||
+insert_nonconsecutive|function|2902374daeee06f7|||||||||||||||
+match_data|function|80fd0e20af874a7c|||||||||||||||
 merge_and_recode_titles|function|93369c3e2c2bdcaa|||||||||||||||
 mun_1994|stem|94e199e39dc815f3|d085ec99ea7b4c44|f0ef3a1a841ad25e|1612909392||t19880.3918525532s|8b698af109474213|2443451|rds|local|vector|||2.894|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
 mun_1998|stem|eb9f79f09da50d28|e27a5a44bc50a01f|b071577072d0065f|1140034410||t19880.3919845468s|cba1005a57c9c4ba|3434616|rds|local|vector|||2.413|There was 1 warning in mutate.ℹ In argument PRIJMENI  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.|
@@ -21,7 +26,7 @@ mun_2006|stem|56e5fc236da63429|5a2eb8a12e04eb08|d02faba4fbb731fc|-750274339||t19
 mun_2010|stem|2b0db11a23c52106|eb0ddb6f97b8e1a1|d02faba4fbb731fc|-78014300||t19880.3917382865s|90139cea37c09260|5523481|rds|local|vector|||5.703|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
 mun_2014|stem|42dc8375d1dfcb7c|3413c98fc0cbba5e|d02faba4fbb731fc|962886030||t19880.391943358s|92f7e1c220ba0fa1|5832580|rds|local|vector|||6.14|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
 mun_2018|stem|51640efc95dded7f|466e2408caa5a13d|5f399c7a4c1da54f|-224577114||t19880.3920512956s|236d2bc23de09556|5519446|rds|local|vector|||4.174|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
-mun_data|object|e69cff71ca5c45c6|||||||||||||||
+mun_data|object|0e85223a9b7963fa|||||||||||||||
 parse_cns_row|function|ea8fb188f4f67eb2|||||||||||||||
 parse_cpp_row|function|39b10ec6d6099bbd|||||||||||||||
 parse_ep_regkand_row|function|51ac78812fd87af2|||||||||||||||
@@ -36,7 +41,7 @@ psp_2010|stem|ff4f7a023c89dfc4|c3a11fe092724eb1|4faa025a0b9af13c|773072139||t198
 psp_2013|stem|42edb270b219b492|d1ff53bae6c4098d|4faa025a0b9af13c|-1204709187||t19880.3895568274s|8844be6f6f819eac|194419|rds|local|vector|||0.116||
 psp_2017|stem|6b2568b8401215a4|9314adf2ff7a2749|3745e23988b89a5e|-364826048||t19880.3895608398s|6045928fb4c80fa6|249754|rds|local|vector|||0.141||
 psp_2021|stem|c2b09cf61922501f|d309eb977f440f3f|3745e23988b89a5e|617370546||t19880.3895495606s|7313ff672e9b71ad|189983|rds|local|vector|||0.28||
-psp_data|object|0db811d215541dbc|||||||||||||||
+psp_data|object|51041fc987be1d1b|||||||||||||||
 read_candidates|function|a894256d2c79cd1f|||||||||||||||
 read_candidates_xml|function|134251ae023de89e|||||||||||||||
 read_cns|function|cedd6f84c12e24b5|||||||||||||||
@@ -53,6 +58,6 @@ reg_2008|stem|596084760e438ae0|8a7fcaedb1705f59|4faa025a0b9af13c|-1053447684||t1
 reg_2012|stem|b9eb9fbaee786e8f|b4980720db8c75c8|4faa025a0b9af13c|-614057398||t19880.3905336855s|25f1c7ffa4f74c65|338484|rds|local|vector|||0.206||
 reg_2016|stem|735207d06765db6f|76860626e74263d8|3745e23988b89a5e|-1786698957||t19880.3905370536s|35b5b985bfbc7dc5|362781|rds|local|vector|||0.197||
 reg_2020|stem|f216cf017c8d7ab7|cc19d7ee661c8f31|3745e23988b89a5e|1747894498||t19880.3905256297s|61aa94ec301444f3|318097|rds|local|vector|||0.178||
-reg_data|object|26a9f8c3758a427e|||||||||||||||
+reg_data|object|5d324437718f8b4e|||||||||||||||
 VSTRANA_MAP_96|object|6ec6e259e857204f|||||||||||||||
 VSTRANA_MAP_98|object|c678b917ba33c2f2|||||||||||||||

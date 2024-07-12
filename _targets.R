@@ -3,7 +3,7 @@ library(targets)
 library(tarchetypes) # Load other packages as needed.
 
 tar_option_set(packages = c("dplyr", "rvest", "here", # "listr", 
-                            "readxl", "readr"))
+                            "readxl", "readr", "reclin2"))
 
 tar_source()
 
@@ -354,7 +354,122 @@ ep_data <- list(
                     parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA) %>%
                         mutate(MANDAT = ifelse(MANDAT == "A", 1, 0))}) %>% 
       mutate(ROK_NAROZENI = 2024 - VEK)
-  })
+  }),
+  
+  tar_target(ep_panel, command = {
+    ep04_09 <- match_data(ep_2004, ep_2009)
+    ep09_14 <- match_data(ep_2009, ep_2014)
+    
+    ep04_14 <- match_data(
+      ep_2004 %>% 
+        filter(!row_id %in% ep04_09$row_id.x),
+      ep_2014 %>% 
+        filter(!row_id %in% ep09_14$row_id.y)
+    )
+    
+    ep14_19 <- match_data(ep_2014, ep_2019)
+    ep09_19 <- match_data(
+      ep_2009 %>% 
+        filter(!row_id %in% ep09_14$row_id.x),
+      ep_2019 %>% 
+        filter(!row_id %in% ep14_19$row_id.y)
+    )
+    ep04_19 <- match_data(
+      ep_2004 %>% 
+        filter(!row_id %in% ep04_09$row_id.x) %>% 
+        filter(!row_id %in% ep04_14$row_id.x),
+      ep_2019 %>% 
+        filter(!row_id %in% ep14_19$row_id.y) %>% 
+        filter(!row_id %in% ep09_19$row_id.y)
+    )
+    
+    ep19_24 <- match_data(ep_2019, ep_2024) 
+    ep14_24 <- match_data(
+      ep_2014 %>% 
+        filter(!row_id %in% ep14_19$row_id.x),
+      ep_2024 %>% 
+        filter(!row_id %in% ep19_24$row_id.y)
+    )
+    ep09_24 <- match_data(
+      ep_2009 %>% 
+        filter(!row_id %in% ep09_14$row_id.x) %>% 
+        filter(!row_id %in% ep09_19$row_id.x),
+      ep_2024 %>% 
+        filter(!row_id %in% ep19_24$row_id.y) %>% 
+        filter(!row_id %in% ep14_24$row_id.y)
+    )
+    ep04_24 <- match_data(
+      ep_2004 %>% 
+        filter(!row_id %in% ep04_09$row_id.x) %>% 
+        filter(!row_id %in% ep04_14$row_id.x) %>% 
+        filter(!row_id %in% ep04_19$row_id.x),
+      ep_2024 %>% 
+        filter(!row_id %in% ep19_24$row_id.y) %>% 
+        filter(!row_id %in% ep14_24$row_id.y) %>% 
+        filter(!row_id %in% ep09_24$row_id.y)
+    )
+    
+    ep04_14 <- ep04_14 %>% select(row_id_2004 = row_id.x, row_id_2014 = row_id.y)
+    ep04_19 <- ep04_19 %>% select(row_id_2004 = row_id.x, row_id_2019 = row_id.y)
+    ep04_24 <- ep04_24 %>% select(row_id_2004 = row_id.x, row_id_2024 = row_id.y)
+    ep09_19 <- ep09_19 %>% select(row_id_2009 = row_id.x, row_id_2019 = row_id.y)
+    ep09_24 <- ep09_24 %>% select(row_id_2009 = row_id.x, row_id_2024 = row_id.y)
+    ep14_24 <- ep14_24 %>% select(row_id_2014 = row_id.x, row_id_2024 = row_id.y)
+    
+    pivot_table <- ep04_09 %>% 
+      select(row_id_2004 = row_id.x, row_id_2009 = row_id.y) %>%
+      bind_rows(., ep_2004 %>% select(row_id_2004 = row_id) %>%
+                  filter(!row_id_2004 %in% ep04_09$row_id.x)) %>%
+      full_join(.,
+                ep09_14 %>% select(row_id_2009 = row_id.x, row_id_2014 = row_id.y) %>%
+                  bind_rows(., ep_2009 %>% select(row_id_2009 = row_id) %>%
+                              filter(!row_id_2009 %in% ep09_14$row_id.x))) %>%
+      insert_nonconsecutive(., ep04_14, "row_id_2004", "row_id_2014") %>%
+      full_join(.,
+                ep14_19 %>% select(row_id_2014 = row_id.x, row_id_2019 = row_id.y) %>%
+                  bind_rows(., ep_2014 %>% select(row_id_2014 = row_id) %>%
+                              filter(!row_id_2014 %in% ep14_19$row_id.x))) %>%
+      insert_nonconsecutive(., ep04_19, "row_id_2004", "row_id_2019") %>%
+      insert_nonconsecutive(., ep09_19, "row_id_2009", "row_id_2019") %>%
+      full_join(.,
+                ep19_24 %>% select(row_id_2019 = row_id.x, row_id_2024 = row_id.y) %>%
+                  bind_rows(., ep_2019 %>% select(row_id_2019 = row_id) %>%
+                              filter(!row_id_2019 %in% ep19_24$row_id.x)),
+                by = "row_id_2019",
+                na_matches = "never"
+      ) %>%
+      insert_nonconsecutive(., ep04_24, "row_id_2004", "row_id_2024") %>%
+      insert_nonconsecutive(., ep09_24, "row_id_2009", "row_id_2024") %>%
+      insert_nonconsecutive(., ep14_24, "row_id_2014", "row_id_2024") %>%
+      bind_rows(., ep_2024 %>% select(row_id_2024 = row_id) %>%
+                  filter(!row_id_2024 %in% ep19_24$row_id.y) %>%
+                  filter(!row_id_2024 %in% c(ep04_24$row_id_2024,
+                                             ep09_24$row_id_2024,
+                                             ep14_24$row_id_2024))) %>%
+      mutate(person_id = paste0("EP", row_number()))
+
+    pivot_table_long <- pivot_table %>%
+      tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                          values_to = "row_id") %>%
+      filter(!is.na(row_id)) %>%
+      mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+
+    ep_candidates <- bind_rows(
+      ep_2004 %>% mutate(year = "2004"),
+      ep_2009 %>% mutate(year = "2009"),
+      ep_2014 %>% mutate(year = "2014"),
+      ep_2019 %>% mutate(year = "2019"),
+      ep_2024 %>% mutate(year = "2024")
+    )
+    
+    full_join(pivot_table_long, ep_candidates, by = c("row_id", "year"))
+  }),
+  
+  tar_target(ep_panel_check, 
+      stopifnot(nrow(ep_panel) == (
+        nrow(ep_2004) + nrow(ep_2009) + nrow(ep_2014) + nrow(ep_2019) + nrow(ep_2024) 
+      ))
+  )
 )
 
 list(
