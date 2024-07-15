@@ -348,6 +348,41 @@ match_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
   link(selected_pairs_greedy, selection = "greedy")
 }
 
+match_reg_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KRZAST")){
+  d1 <- d1 %>% 
+    mutate(across(c(TITULPRED, TITULZA), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(TITULPRED, TITULZA), ~if_else(is.na(.x), "", .x)))
+  
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                       "TITULPRED", "TITULZA", "ZKRATKAP8", 
+                                       "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         comparators = list(
+                           ROK_NAROZENI = cmp_within_1(),
+                           POVOLANI = cmp_jaccard()
+                           # TODO: stejný nebo větší titul
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                "TITULPRED", "TITULZA", "ZKRATKAP8", 
+                                "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
+                                TITULPRED = 0.5, TITULZA = 0.5, 
+                                ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
+                                BYDLISTEN = 0.5, POVOLANI = 0.5),
+                         w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
+                                TITULPRED = -0.5, TITULZA = -0.5, 
+                                ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
+                                BYDLISTEN = -0.5, POVOLANI = 0), 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  
+  link(selected_pairs_greedy, selection = "greedy")
+}
+
 insert_nonconsecutive <- function(pivot_table, noncons, source, target){
   noncons <- as.data.frame(noncons) 
   pivot_table <- as.data.frame(pivot_table)

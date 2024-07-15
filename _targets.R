@@ -172,7 +172,182 @@ reg_data <- list(
                     parties, cpp, cns) %>%
       mutate(PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
              MANDAT = ifelse(MANDAT == "A", 1, 0))
-  })
+  }), 
+  
+  tar_target(reg_panel, {
+    reg00_04 <- match_reg_data(reg_2000, reg_2004)
+    reg04_08 <- match_reg_data(reg_2004, reg_2008)
+    
+    reg00_08 <- match_reg_data(
+      reg_2000 %>% 
+        filter(!row_id %in% reg00_04$row_id.x),
+      reg_2008 %>% 
+        filter(!row_id %in% reg04_08$row_id.y)
+    )
+    
+    reg08_12 <- match_reg_data(reg_2008, reg_2012)
+    reg04_12 <- match_reg_data(
+      reg_2004 %>% 
+        filter(!row_id %in% reg04_08$row_id.x),
+      reg_2012 %>% 
+        filter(!row_id %in% reg08_12$row_id.y)
+    )
+    reg00_12 <- match_reg_data(
+      reg_2000 %>% 
+        filter(!row_id %in% reg00_04$row_id.x) %>% 
+        filter(!row_id %in% reg00_08$row_id.x),
+      reg_2012 %>% 
+        filter(!row_id %in% reg08_12$row_id.y) %>% 
+        filter(!row_id %in% reg04_12$row_id.y)
+    )
+    
+    reg12_16 <- match_reg_data(reg_2012, reg_2016)
+    reg08_16 <- match_reg_data(
+      reg_2008 %>% 
+        filter(!row_id %in% reg08_12$row_id.x),
+      reg_2016 %>% 
+        filter(!row_id %in% reg12_16$row_id.y)
+    )
+    reg04_16 <- match_reg_data(
+      reg_2004 %>% 
+        filter(!row_id %in% reg04_08$row_id.x) %>% 
+        filter(!row_id %in% reg04_12$row_id.x),
+      reg_2016 %>% 
+        filter(!row_id %in% reg12_16$row_id.y) %>% 
+        filter(!row_id %in% reg08_16$row_id.x)
+    )
+    reg00_16 <- match_reg_data(
+      reg_2000 %>% 
+        filter(!row_id %in% reg00_04$row_id.x) %>% 
+        filter(!row_id %in% reg00_08$row_id.x) %>% 
+        filter(!row_id %in% reg00_12$row_id.x),
+      reg_2016 %>% 
+        filter(!row_id %in% reg12_16$row_id.y) %>% 
+        filter(!row_id %in% reg08_16$row_id.x) %>% 
+        filter(!row_id %in% reg04_16$row_id.x)
+    )
+    
+    reg16_20 <- match_reg_data(reg_2016, reg_2020)
+    reg12_20 <- match_reg_data(
+      reg_2012 %>% 
+        filter(!row_id %in% reg12_16$row_id.x),
+      reg_2020 %>% 
+        filter(!row_id %in% reg16_20$row_id.y)
+    )
+    reg08_20 <- match_reg_data(
+      reg_2008 %>% 
+        filter(!row_id %in% reg08_12$row_id.x) %>% 
+        filter(!row_id %in% reg08_16$row_id.x),
+      reg_2020 %>% 
+        filter(!row_id %in% reg16_20$row_id.y) %>% 
+        filter(!row_id %in% reg12_20$row_id.y)
+    )
+    reg04_20 <- match_reg_data(
+      reg_2004 %>% 
+        filter(!row_id %in% reg04_08$row_id.x) %>% 
+        filter(!row_id %in% reg04_12$row_id.x) %>% 
+        filter(!row_id %in% reg04_16$row_id.x),
+      reg_2020 %>% 
+        filter(!row_id %in% reg16_20$row_id.y) %>% 
+        filter(!row_id %in% reg12_20$row_id.y) %>% 
+        filter(!row_id %in% reg08_20$row_id.x)
+    )
+    reg00_20 <- match_reg_data(
+      reg_2000 %>% 
+        filter(!row_id %in% reg00_04$row_id.x) %>% 
+        filter(!row_id %in% reg00_08$row_id.x) %>% 
+        filter(!row_id %in% reg00_12$row_id.x) %>% 
+        filter(!row_id %in% reg00_16$row_id.x),
+      reg_2020 %>% 
+        filter(!row_id %in% reg16_20$row_id.y) %>% 
+        filter(!row_id %in% reg12_20$row_id.y) %>% 
+        filter(!row_id %in% reg08_20$row_id.x) %>% 
+        filter(!row_id %in% reg04_20$row_id.x)
+    )
+    
+    reg00_04 <- reg00_04 %>% select(row_id_2000 = row_id.x, row_id_2004 = row_id.y)
+    reg00_08 <- reg00_08 %>% select(row_id_2000 = row_id.x, row_id_2008 = row_id.y)
+    reg00_12 <- reg00_12 %>% select(row_id_2000 = row_id.x, row_id_2012 = row_id.y)
+    reg00_16 <- reg00_16 %>% select(row_id_2000 = row_id.x, row_id_2016 = row_id.y)
+    reg00_20 <- reg00_20 %>% select(row_id_2000 = row_id.x, row_id_2020 = row_id.y)
+    
+    reg04_08 <- reg04_08 %>% select(row_id_2004 = row_id.x, row_id_2008 = row_id.y)
+    reg04_12 <- reg04_12 %>% select(row_id_2004 = row_id.x, row_id_2012 = row_id.y)
+    reg04_16 <- reg04_16 %>% select(row_id_2004 = row_id.x, row_id_2016 = row_id.y)
+    reg04_20 <- reg04_20 %>% select(row_id_2004 = row_id.x, row_id_2020 = row_id.y)
+    
+    reg08_12 <- reg08_12 %>% select(row_id_2008 = row_id.x, row_id_2012 = row_id.y)
+    reg08_16 <- reg08_16 %>% select(row_id_2008 = row_id.x, row_id_2016 = row_id.y)
+    reg08_20 <- reg08_20 %>% select(row_id_2008 = row_id.x, row_id_2020 = row_id.y)
+    
+    reg12_16 <- reg12_16 %>% select(row_id_2012 = row_id.x, row_id_2016 = row_id.y)
+    reg12_20 <- reg12_20 %>% select(row_id_2012 = row_id.x, row_id_2020 = row_id.y)
+    
+    reg16_20 <- reg16_20 %>% select(row_id_2016 = row_id.x, row_id_2020 = row_id.y)
+    
+    pivot_table <- reg00_04 %>% 
+      bind_rows(., reg_2000 %>% select(row_id_2000 = row_id) %>%
+                  filter(!row_id_2000 %in% reg00_04$row_id_2000)) %>%
+      full_join(.,
+                reg04_08 %>%
+                  bind_rows(., reg_2004 %>% select(row_id_2004 = row_id) %>%
+                              filter(!row_id_2004 %in% reg04_08$row_id_2004))) %>%
+      insert_nonconsecutive(., reg00_08, "row_id_2000", "row_id_2008") %>%
+      full_join(., reg08_12 %>% 
+                  bind_rows(., reg_2008 %>% 
+                              select(row_id_2008 = row_id) %>% 
+                              filter(!row_id_2008 %in% reg08_12$row_id_2008))) %>% 
+      insert_nonconsecutive(., reg04_12, "row_id_2004", "row_id_2012") %>% 
+      insert_nonconsecutive(., reg00_12, "row_id_2000", "row_id_2012") %>% 
+      full_join(., reg12_16 %>% 
+                  bind_rows(., reg_2012 %>% 
+                              select(row_id_2012 = row_id) %>% 
+                              filter(!row_id_2012 %in% reg12_16$row_id_2012))) %>% 
+      insert_nonconsecutive(., reg08_16, "row_id_2008", "row_id_2016") %>% 
+      insert_nonconsecutive(., reg04_16, "row_id_2004", "row_id_2016") %>% 
+      insert_nonconsecutive(., reg00_16, "row_id_2000", "row_id_2016") %>% 
+      full_join(., reg16_20 %>% 
+                  bind_rows(., reg_2016 %>% 
+                              select(row_id_2016 = row_id) %>% 
+                              filter(!row_id_2016 %in% reg16_20$row_id_2016))) %>% 
+      insert_nonconsecutive(., reg12_20, "row_id_2012", "row_id_2020") %>% 
+      insert_nonconsecutive(., reg08_20, "row_id_2008", "row_id_2020") %>% 
+      insert_nonconsecutive(., reg04_20, "row_id_2004", "row_id_2020") %>% 
+      insert_nonconsecutive(., reg00_20, "row_id_2000", "row_id_2020") %>% 
+      bind_rows(., reg_2020 %>% select(row_id_2020 = row_id) %>%
+                  filter(!row_id_2020 %in% c(reg16_20$row_id_2020,
+                                             reg12_20$row_id_2020,
+                                             reg08_20$row_id_2020,
+                                             reg04_20$row_id_2020,
+                                             reg00_20$row_id_2020)))
+    
+    pivot_table_long <- pivot_table %>%
+      mutate(person_id = paste0("REG", row_number())) %>% 
+      tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                          values_to = "row_id") %>%
+      filter(!is.na(row_id)) %>%
+      mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+    
+    reg_candidates <- bind_rows(
+      reg_2000 %>% mutate(year = "2000"),
+      reg_2004 %>% mutate(year = "2004"),
+      reg_2008 %>% mutate(year = "2008"),
+      reg_2012 %>% mutate(year = "2012"),
+      reg_2016 %>% mutate(year = "2016"),
+      reg_2020 %>% mutate(year = "2020")
+    )
+    
+    full_join(pivot_table_long, reg_candidates, by = c("row_id", "year")) 
+    
+  }),
+  
+  tar_target(
+    reg_panel_check, 
+    stopifnot(nrow(reg_panel) == (
+      nrow(reg_2000) + nrow(reg_2004) + nrow(reg_2008) + nrow(reg_2012) + 
+        nrow(reg_2016) + nrow(reg_2020) 
+    ))
+  )
 )
 
 mun_data <- list(
