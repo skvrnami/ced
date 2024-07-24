@@ -13,6 +13,7 @@ tar_source()
 
 # Replace the target list below with your own:
 psp_data <- list(
+  # TODO: jména krajů
   tar_target(psp_1996, command = {
     cpp <- read_cpp(here("data", "PS1996", "CPPPS96.xlsx"), function(x) {x %>% rename(ZKRATKAP8 = ZKRATKAP)})
     read_excel(here("data", "PS1996", "PS96-RK.xlsx")) %>%
@@ -332,8 +333,6 @@ psp_data <- list(
         filter(!row_id %in% psp_98_21$row_id.y)
     )
     
-    
-    
     ##
     psp_96_98b <- psp_96_98 %>% select(row_id_1996 = row_id.x, row_id_1998 = row_id.y)
     psp_96_02b <- psp_96_02 %>% select(row_id_1996 = row_id.x, row_id_2002 = row_id.y)
@@ -354,7 +353,7 @@ psp_data <- list(
     psp_02_10b <- psp_02_10 %>% select(row_id_2002 = row_id.x, row_id_2010 = row_id.y)
     psp_02_13b <- psp_02_13 %>% select(row_id_2002 = row_id.x, row_id_2013 = row_id.y)
     psp_02_17b <- psp_02_17 %>% select(row_id_2002 = row_id.x, row_id_2017 = row_id.y)
-    psp_02_21b <- psp_02_17 %>% select(row_id_2002 = row_id.x, row_id_2021 = row_id.y)
+    psp_02_21b <- psp_02_21 %>% select(row_id_2002 = row_id.x, row_id_2021 = row_id.y)
     
     psp_06_10b <- psp_06_10 %>% select(row_id_2006 = row_id.x, row_id_2010 = row_id.y)
     psp_06_13b <- psp_06_13 %>% select(row_id_2006 = row_id.x, row_id_2013 = row_id.y)
@@ -446,7 +445,15 @@ psp_data <- list(
     )
     
     full_join(pivot_table_long, psp_candidates, by = c("row_id", "year"))
-  })
+  }), 
+  
+  tar_target(
+    psp_panel_check, 
+    stopifnot(nrow(psp_panel) == (
+      nrow(psp_1996) + nrow(psp_1998) + nrow(psp_2002) + nrow(psp_2006) + 
+        nrow(psp_2010) + nrow(psp_2013) + nrow(psp_2017) + nrow(psp_2021) 
+    ))
+  )
 )
 
 reg_data <- list(
@@ -700,6 +707,7 @@ reg_data <- list(
   )
 )
 
+# TODO: mun_2022
 mun_data <- list(
   tar_target(mun_1994, command = {
     parties <- read_excel(here("data", "KV1994", "CVSKV94.xlsx"))
@@ -825,7 +833,55 @@ mun_data <- list(
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
                                PRIJMENI))
-  })
+  }), 
+  
+  # TODO: dodatečné volby
+  tar_target(mun_2022, command = {
+    parties <- read_excel(here("data", "KV2022", "KV2022reg20240623_xlsx", "kvros.xlsx")) %>% 
+      filter(DATUMVOLEB == min(DATUMVOLEB)) %>% 
+      select(KODZASTUP, COBVODU, POR_STR_HL, OSTRANA, NAZEVCELK)
+    cpp <- read_cpp(here("data", "KV2022", "KV2022ciselniky20240623", "cpp.xlsx"))
+    cns <- read_cns(here("data", "KV2022", "KV2022ciselniky20240623", "cns.xlsx"))
+    read_excel(here("data", "KV2022", "KV2022reg20240623_xlsx", "kvrk.xlsx")) %>%
+      filter(DATUMVOLEB == min(DATUMVOLEB)) %>% 
+      left_join(., parties, by = c("KODZASTUP", "COBVODU", "POR_STR_HL", "OSTRANA")) %>%
+      left_join(., cpp, by = "PSTRANA") %>%
+      left_join(., cns, by = "NSTRANA") %>%
+      mutate(row_id = row_number(), 
+             ROK_NAROZENI = 2022 - VEK) %>%
+      merge_and_recode_titles
+  }),
+  
+  tar_target(district_municipalities_map, read_csv(here("data", "mcast_obec.csv"), 
+                                                   locale = locale(encoding = "WINDOWS-1250")) %>%
+               select(CITY_DISTRICT = CHODNOTA1, 
+                      MUNICIPALITY = CHODNOTA2)),
+  
+  # Městské části ------------------------------
+  tar_target(mc_1994, filter_city_districts(mun_1994, district_municipalities_map)),
+  tar_target(mc_1998, filter_city_districts(mun_1998, district_municipalities_map)),
+  tar_target(mc_2002, filter_city_districts(mun_2002, district_municipalities_map)),
+  tar_target(mc_2006, filter_city_districts(mun_2006, district_municipalities_map)),
+  tar_target(mc_2010, filter_city_districts(mun_2010, district_municipalities_map)),
+  tar_target(mc_2014, filter_city_districts(mun_2014, district_municipalities_map)),
+  tar_target(mc_2018, filter_city_districts(mun_2018, district_municipalities_map)),
+  tar_target(mc_2022, filter_city_districts(mun_2022, district_municipalities_map)),
+  
+  # Obce ----------------------------------------
+  tar_target(m_1994, filter_municipalities(mun_1994, district_municipalities_map) %>%
+               mutate(PRIJMENI = gsub('"o', "ö", PRIJMENI) %>%
+                        gsub('o"', "ö", .) %>%
+                        gsub('u"', "ü", .)
+               )),
+  tar_target(m_1998, filter_municipalities(mun_1998, district_municipalities_map)),
+  tar_target(m_2002, filter_municipalities(mun_2002, district_municipalities_map)),
+  tar_target(m_2006, filter_municipalities(mun_2006, district_municipalities_map)),
+  tar_target(m_2010, filter_municipalities(mun_2010, district_municipalities_map)),
+  tar_target(m_2014, filter_municipalities(mun_2014, district_municipalities_map)),
+  tar_target(m_2018, filter_municipalities(mun_2018, district_municipalities_map)),
+  tar_target(m_2022, filter_municipalities(mun_2022, district_municipalities_map))
+  
+  
 )
 
 ep_data <- list(
