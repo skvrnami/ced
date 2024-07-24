@@ -20,7 +20,8 @@ psp_data <- list(
       left_join(., cpp, by = "PSTRANA") %>%
       merge_and_recode_titles %>%
       mutate(row_id = row_number(), 
-             ROK_NAROZENI = 1996 - VEK)
+             ROK_NAROZENI = 1996 - VEK) %>% 
+      rename(VOLKRAJ = KRAJ)
   }),
   
   tar_target(psp_1998, command = {
@@ -30,7 +31,8 @@ psp_data <- list(
       left_join(., cpp, by = "PSTRANA") %>%
       merge_and_recode_titles %>%
       mutate(row_id = row_number(), 
-             ROK_NAROZENI = 1998 - VEK)
+             ROK_NAROZENI = 1998 - VEK) %>% 
+      rename(VOLKRAJ = KRAJ)
   }),
   
   tar_target(psp_2002, command = {
@@ -96,6 +98,354 @@ psp_data <- list(
                     psp_parties, cpp, cns) %>%
       mutate(PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
              MANDAT = ifelse(MANDAT == "A", 1, 0))
+  }), 
+  
+  tar_target(psp_panel, {
+    psp_96_98 <- match_psp_data(psp_1996, psp_1998)
+    
+    psp_98_02 <- match_psp_data(psp_1998, psp_2002)
+    
+    psp_96_02 <- match_psp_data(
+      psp_1996 %>% 
+        filter(!row_id %in% psp_96_98$row_id.x),
+      psp_2002 %>% 
+        filter(!row_id %in% psp_98_02$row_id.y)
+    )
+    
+    psp_02_06 <- match_psp_data(psp_2002, psp_2006)
+    
+    psp_98_06 <- match_psp_data(
+      psp_1998 %>% 
+        filter(!row_id %in% psp_98_02$row_id.x),
+      psp_2006 %>% 
+        filter(!row_id %in% psp_02_06$row_id.y)
+    )
+    
+    psp_96_06 <- match_psp_data(
+      psp_1996 %>% 
+        filter(!row_id %in% psp_96_98$row_id.x) %>% 
+        filter(!row_id %in% psp_96_02$row_id.x),
+      psp_2006 %>% 
+        filter(!row_id %in% psp_02_06$row_id.y) %>% 
+        filter(!row_id %in% psp_98_06$row_id.y)
+    )
+    
+    psp_06_10 <- match_psp_data(psp_2006, psp_2010)
+    
+    psp_02_10 <- match_psp_data(
+      psp_2002 %>% 
+        filter(!row_id %in% psp_02_06$row_id.x),
+      psp_2010 %>% 
+        filter(!row_id %in% psp_06_10$row_id.y)
+    )
+    
+    psp_98_10 <- match_psp_data(
+      psp_1998 %>% 
+        filter(!row_id %in% psp_98_02$row_id.x) %>% 
+        filter(!row_id %in% psp_98_06$row_id.x),
+      psp_2010 %>% 
+        filter(!row_id %in% psp_06_10$row_id.y) %>% 
+        filter(!row_id %in% psp_02_10$row_id.y)
+    )
+    
+    psp_96_10 <- match_psp_data(
+      psp_1996 %>% 
+        filter(!row_id %in% psp_96_98$row_id.x) %>% 
+        filter(!row_id %in% psp_96_02$row_id.x) %>% 
+        filter(!row_id %in% psp_96_06$row_id.x),
+      psp_2010 %>% 
+        filter(!row_id %in% psp_06_10$row_id.y) %>% 
+        filter(!row_id %in% psp_02_10$row_id.y) %>% 
+        filter(!row_id %in% psp_98_10$row_id.y)
+    )
+    
+    psp_10_13 <- match_psp_data(psp_2010, psp_2013)
+    
+    psp_06_13 <- match_psp_data(
+      psp_2006 %>% 
+        filter(!row_id %in% psp_06_10$row_id.x), 
+      psp_2013 %>% 
+        filter(!row_id %in% psp_10_13$row_id.y)    
+    )
+    
+    psp_02_13 <- match_psp_data(
+      psp_2002 %>% 
+        filter(!row_id %in% psp_02_06$row_id.x) %>% 
+        filter(!row_id %in% psp_02_10$row_id.x), 
+      psp_2013 %>% 
+        filter(!row_id %in% psp_10_13$row_id.y) %>% 
+        filter(!row_id %in% psp_06_13$row_id.y)
+    )
+    
+    psp_98_13 <- match_psp_data(
+      psp_1998 %>% 
+        filter(!row_id %in% psp_98_02$row_id.x) %>% 
+        filter(!row_id %in% psp_98_06$row_id.x) %>% 
+        filter(!row_id %in% psp_98_10$row_id.x), 
+      psp_2013 %>% 
+        filter(!row_id %in% psp_10_13$row_id.y) %>% 
+        filter(!row_id %in% psp_06_13$row_id.y) %>% 
+        filter(!row_id %in% psp_02_13$row_id.y)
+    )
+    
+    psp_96_13 <- match_psp_data(
+      psp_1996 %>% 
+        filter(!row_id %in% psp_96_98$row_id.x) %>% 
+        filter(!row_id %in% psp_96_02$row_id.x) %>% 
+        filter(!row_id %in% psp_96_06$row_id.x) %>% 
+        filter(!row_id %in% psp_96_10$row_id.x), 
+      psp_2013 %>% 
+        filter(!row_id %in% psp_10_13$row_id.y) %>% 
+        filter(!row_id %in% psp_06_13$row_id.y) %>% 
+        filter(!row_id %in% psp_02_13$row_id.y) %>% 
+        filter(!row_id %in% psp_98_13$row_id.y)
+    )
+    
+    psp_13_17 <- match_psp_data(psp_2013, psp_2017)
+    
+    psp_10_17 <- match_psp_data(
+      psp_2010 %>% 
+        filter(!row_id %in% psp_10_13$row_id.x), 
+      psp_2017 %>% 
+        filter(!row_id %in% psp_13_17$row_id.y)
+    )
+    
+    psp_06_17 <- match_psp_data(
+      psp_2006 %>% 
+        filter(!row_id %in% psp_06_10$row_id.x) %>% 
+        filter(!row_id %in% psp_06_13$row_id.x), 
+      psp_2017 %>% 
+        filter(!row_id %in% psp_13_17$row_id.y) %>% 
+        filter(!row_id %in% psp_10_17$row_id.y)
+    )
+    
+    psp_02_17 <- match_psp_data(
+      psp_2002 %>% 
+        filter(!row_id %in% psp_02_06$row_id.x) %>% 
+        filter(!row_id %in% psp_02_10$row_id.x) %>% 
+        filter(!row_id %in% psp_02_13$row_id.x), 
+      psp_2017 %>% 
+        filter(!row_id %in% psp_13_17$row_id.y) %>% 
+        filter(!row_id %in% psp_10_17$row_id.y) %>% 
+        filter(!row_id %in% psp_06_17$row_id.y)
+    )
+    
+    psp_98_17 <- match_psp_data(
+      psp_1998 %>% 
+        filter(!row_id %in% psp_98_02$row_id.x) %>% 
+        filter(!row_id %in% psp_98_06$row_id.x) %>% 
+        filter(!row_id %in% psp_98_10$row_id.x) %>% 
+        filter(!row_id %in% psp_98_13$row_id.x), 
+      psp_2017 %>% 
+        filter(!row_id %in% psp_13_17$row_id.y) %>% 
+        filter(!row_id %in% psp_10_17$row_id.y) %>% 
+        filter(!row_id %in% psp_06_17$row_id.y) %>% 
+        filter(!row_id %in% psp_02_17$row_id.y)
+    )
+    
+    psp_96_17 <- match_psp_data(
+      psp_1996 %>% 
+        filter(!row_id %in% psp_96_98$row_id.x) %>% 
+        filter(!row_id %in% psp_96_02$row_id.x) %>% 
+        filter(!row_id %in% psp_96_06$row_id.x) %>% 
+        filter(!row_id %in% psp_96_10$row_id.x) %>% 
+        filter(!row_id %in% psp_96_13$row_id.x), 
+      psp_2017 %>% 
+        filter(!row_id %in% psp_13_17$row_id.y) %>% 
+        filter(!row_id %in% psp_10_17$row_id.y) %>% 
+        filter(!row_id %in% psp_06_17$row_id.y) %>% 
+        filter(!row_id %in% psp_02_17$row_id.y) %>% 
+        filter(!row_id %in% psp_98_17$row_id.y)
+    )
+    
+    psp_17_21 <- match_psp_data(psp_2017, psp_2021)
+    
+    psp_13_21 <- match_psp_data(
+      psp_2013 %>% 
+        filter(!row_id %in% psp_13_17$row_id.x), 
+      psp_2021 %>% 
+        filter(!row_id %in% psp_17_21$row_id.y)
+    )
+    
+    psp_10_21 <- match_psp_data(
+      psp_2010 %>% 
+        filter(!row_id %in% psp_10_17$row_id.x) %>% 
+        filter(!row_id %in% psp_10_13$row_id.x),
+      psp_2021 %>% 
+        filter(!row_id %in% psp_17_21$row_id.y) %>% 
+        filter(!row_id %in% psp_13_21$row_id.y)
+    )
+    
+    psp_06_21 <- match_psp_data(
+      psp_2006 %>% 
+        filter(!row_id %in% psp_06_10$row_id.x) %>% 
+        filter(!row_id %in% psp_06_13$row_id.x) %>% 
+        filter(!row_id %in% psp_06_17$row_id.x),
+      psp_2021 %>% 
+        filter(!row_id %in% psp_17_21$row_id.y) %>% 
+        filter(!row_id %in% psp_13_21$row_id.y) %>% 
+        filter(!row_id %in% psp_10_21$row_id.y)
+    )
+    
+    psp_02_21 <- match_psp_data(
+      psp_2002 %>% 
+        filter(!row_id %in% psp_02_17$row_id.x) %>% 
+        filter(!row_id %in% psp_02_13$row_id.x) %>% 
+        filter(!row_id %in% psp_02_10$row_id.x) %>% 
+        filter(!row_id %in% psp_02_06$row_id.x),
+      psp_2021 %>% 
+        filter(!row_id %in% psp_17_21$row_id.y) %>% 
+        filter(!row_id %in% psp_13_21$row_id.y) %>% 
+        filter(!row_id %in% psp_10_21$row_id.y) %>% 
+        filter(!row_id %in% psp_06_21$row_id.y)
+    )
+    
+    psp_98_21 <- match_psp_data(
+      psp_1998 %>% 
+        filter(!row_id %in% psp_98_17$row_id.x) %>% 
+        filter(!row_id %in% psp_98_13$row_id.x) %>% 
+        filter(!row_id %in% psp_98_10$row_id.x) %>% 
+        filter(!row_id %in% psp_98_06$row_id.x) %>% 
+        filter(!row_id %in% psp_98_02$row_id.x),
+      psp_2021 %>% 
+        filter(!row_id %in% psp_17_21$row_id.y) %>% 
+        filter(!row_id %in% psp_13_21$row_id.y) %>% 
+        filter(!row_id %in% psp_10_21$row_id.y) %>% 
+        filter(!row_id %in% psp_06_21$row_id.y) %>% 
+        filter(!row_id %in% psp_02_21$row_id.y)
+    )
+    
+    psp_96_21 <- match_psp_data(
+      psp_1996 %>% 
+        filter(!row_id %in% psp_96_17$row_id.x) %>% 
+        filter(!row_id %in% psp_96_13$row_id.x) %>% 
+        filter(!row_id %in% psp_96_10$row_id.x) %>% 
+        filter(!row_id %in% psp_96_06$row_id.x) %>% 
+        filter(!row_id %in% psp_96_02$row_id.x) %>% 
+        filter(!row_id %in% psp_96_98$row_id.x),
+      psp_2021 %>% 
+        filter(!row_id %in% psp_17_21$row_id.y) %>% 
+        filter(!row_id %in% psp_13_21$row_id.y) %>% 
+        filter(!row_id %in% psp_10_21$row_id.y) %>% 
+        filter(!row_id %in% psp_06_21$row_id.y) %>% 
+        filter(!row_id %in% psp_02_21$row_id.y) %>% 
+        filter(!row_id %in% psp_98_21$row_id.y)
+    )
+    
+    
+    
+    ##
+    psp_96_98b <- psp_96_98 %>% select(row_id_1996 = row_id.x, row_id_1998 = row_id.y)
+    psp_96_02b <- psp_96_02 %>% select(row_id_1996 = row_id.x, row_id_2002 = row_id.y)
+    psp_96_06b <- psp_96_06 %>% select(row_id_1996 = row_id.x, row_id_2006 = row_id.y)
+    psp_96_10b <- psp_96_10 %>% select(row_id_1996 = row_id.x, row_id_2010 = row_id.y)
+    psp_96_13b <- psp_96_13 %>% select(row_id_1996 = row_id.x, row_id_2013 = row_id.y)
+    psp_96_17b <- psp_96_17 %>% select(row_id_1996 = row_id.x, row_id_2017 = row_id.y)
+    psp_96_21b <- psp_96_21 %>% select(row_id_1996 = row_id.x, row_id_2021 = row_id.y)
+    
+    psp_98_02b <- psp_98_02 %>% select(row_id_1998 = row_id.x, row_id_2002 = row_id.y)
+    psp_98_06b <- psp_98_06 %>% select(row_id_1998 = row_id.x, row_id_2006 = row_id.y)
+    psp_98_10b <- psp_98_10 %>% select(row_id_1998 = row_id.x, row_id_2010 = row_id.y)
+    psp_98_13b <- psp_98_13 %>% select(row_id_1998 = row_id.x, row_id_2013 = row_id.y)
+    psp_98_17b <- psp_98_17 %>% select(row_id_1998 = row_id.x, row_id_2017 = row_id.y)
+    psp_98_21b <- psp_98_21 %>% select(row_id_1998 = row_id.x, row_id_2021 = row_id.y)
+    
+    psp_02_06b <- psp_02_06 %>% select(row_id_2002 = row_id.x, row_id_2006 = row_id.y)
+    psp_02_10b <- psp_02_10 %>% select(row_id_2002 = row_id.x, row_id_2010 = row_id.y)
+    psp_02_13b <- psp_02_13 %>% select(row_id_2002 = row_id.x, row_id_2013 = row_id.y)
+    psp_02_17b <- psp_02_17 %>% select(row_id_2002 = row_id.x, row_id_2017 = row_id.y)
+    psp_02_21b <- psp_02_17 %>% select(row_id_2002 = row_id.x, row_id_2021 = row_id.y)
+    
+    psp_06_10b <- psp_06_10 %>% select(row_id_2006 = row_id.x, row_id_2010 = row_id.y)
+    psp_06_13b <- psp_06_13 %>% select(row_id_2006 = row_id.x, row_id_2013 = row_id.y)
+    psp_06_17b <- psp_06_17 %>% select(row_id_2006 = row_id.x, row_id_2017 = row_id.y)
+    psp_06_21b <- psp_06_21 %>% select(row_id_2006 = row_id.x, row_id_2021 = row_id.y)
+    
+    psp_10_13b <- psp_10_13 %>% select(row_id_2010 = row_id.x, row_id_2013 = row_id.y)
+    psp_10_17b <- psp_10_17 %>% select(row_id_2010 = row_id.x, row_id_2017 = row_id.y)
+    psp_10_21b <- psp_10_21 %>% select(row_id_2010 = row_id.x, row_id_2021 = row_id.y)
+    
+    psp_13_17b <- psp_13_17 %>% select(row_id_2013 = row_id.x, row_id_2017 = row_id.y)
+    psp_13_21b <- psp_13_21 %>% select(row_id_2013 = row_id.x, row_id_2021 = row_id.y)
+    
+    psp_17_21b <- psp_17_21 %>% select(row_id_2017 = row_id.x, row_id_2021 = row_id.y)
+    
+    pivot_table <- psp_96_98b %>% 
+      bind_rows(., psp_1996 %>% select(row_id_1996 = row_id) %>%
+                  filter(!row_id_1996 %in% psp_96_98b$row_id_1996)) %>%
+      full_join(.,
+                psp_98_02b %>%
+                  bind_rows(., psp_1998 %>% select(row_id_1998 = row_id) %>%
+                              filter(!row_id_1998 %in% psp_98_02b$row_id_1998))) %>%
+      insert_nonconsecutive(., psp_96_02b, "row_id_1996", "row_id_2002") %>%
+      full_join(., psp_02_06b %>% 
+                  bind_rows(., psp_2002 %>% 
+                              select(row_id_2002 = row_id) %>% 
+                              filter(!row_id_2002 %in% psp_02_06b$row_id_2002))) %>% 
+      insert_nonconsecutive(., psp_98_06b, "row_id_1998", "row_id_2006") %>% 
+      insert_nonconsecutive(., psp_96_06b, "row_id_1996", "row_id_2006") %>% 
+      full_join(., psp_06_10b %>% 
+                  bind_rows(., psp_2006 %>% 
+                              select(row_id_2006 = row_id) %>% 
+                              filter(!row_id_2006 %in% psp_06_10b$row_id_2006))) %>% 
+      insert_nonconsecutive(., psp_02_10b, "row_id_2002", "row_id_2010") %>% 
+      insert_nonconsecutive(., psp_98_10b, "row_id_1998", "row_id_2010") %>% 
+      insert_nonconsecutive(., psp_96_10b, "row_id_1996", "row_id_2010") %>% 
+      full_join(., psp_10_13b %>% 
+                  bind_rows(., psp_2010 %>% 
+                              select(row_id_2010 = row_id) %>% 
+                              filter(!row_id_2010 %in% psp_10_13b$row_id_2010))) %>% 
+      insert_nonconsecutive(., psp_06_13b, "row_id_2006", "row_id_2013") %>% 
+      insert_nonconsecutive(., psp_02_13b, "row_id_2002", "row_id_2013") %>% 
+      insert_nonconsecutive(., psp_98_13b, "row_id_1998", "row_id_2013") %>% 
+      insert_nonconsecutive(., psp_96_13b, "row_id_1996", "row_id_2013") %>% 
+      full_join(., psp_13_17b %>% 
+                  bind_rows(., psp_2013 %>% 
+                              select(row_id_2013 = row_id) %>% 
+                              filter(!row_id_2013 %in% psp_13_17b$row_id_2013))) %>% 
+      insert_nonconsecutive(., psp_10_17b, "row_id_2010", "row_id_2017") %>% 
+      insert_nonconsecutive(., psp_06_17b, "row_id_2006", "row_id_2017") %>% 
+      insert_nonconsecutive(., psp_02_17b, "row_id_2002", "row_id_2017") %>% 
+      insert_nonconsecutive(., psp_98_17b, "row_id_1998", "row_id_2017") %>% 
+      insert_nonconsecutive(., psp_96_17b, "row_id_1996", "row_id_2017") %>% 
+      full_join(., psp_17_21b %>% 
+                  bind_rows(., psp_2017 %>% 
+                              select(row_id_2017 = row_id) %>% 
+                              filter(!row_id_2017 %in% psp_17_21b$row_id_2017))) %>% 
+      insert_nonconsecutive(., psp_13_21b, "row_id_2013", "row_id_2021") %>%
+      insert_nonconsecutive(., psp_10_21b, "row_id_2010", "row_id_2021") %>% 
+      insert_nonconsecutive(., psp_06_21b, "row_id_2006", "row_id_2021") %>% 
+      insert_nonconsecutive(., psp_02_21b, "row_id_2002", "row_id_2021") %>% 
+      insert_nonconsecutive(., psp_98_21b, "row_id_1998", "row_id_2021") %>% 
+      insert_nonconsecutive(., psp_96_21b, "row_id_1996", "row_id_2021") %>% 
+      bind_rows(., psp_2021 %>% select(row_id_2021 = row_id) %>%
+                  filter(!row_id_2021 %in% c(psp_17_21b$row_id_2021,
+                                             psp_13_21b$row_id_2021,
+                                             psp_10_21b$row_id_2021,
+                                             psp_06_21b$row_id_2021,
+                                             psp_02_21b$row_id_2021, 
+                                             psp_98_21b$row_id_2021, 
+                                             psp_96_21b$row_id_2021)))
+    
+    pivot_table_long <- pivot_table %>%
+      mutate(person_id = paste0("PSP", row_number())) %>% 
+      tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                          values_to = "row_id") %>%
+      filter(!is.na(row_id)) %>%
+      mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+    
+    psp_candidates <- bind_rows(
+      psp_1996 %>% mutate(year = "1996"),
+      psp_1998 %>% mutate(year = "1998"),
+      psp_2002 %>% mutate(year = "2002"),
+      psp_2006 %>% mutate(year = "2006"),
+      psp_2010 %>% mutate(year = "2010"),
+      psp_2013 %>% mutate(year = "2013"),
+      psp_2017 %>% mutate(year = "2017"),
+      psp_2021 %>% mutate(year = "2021")
+    )
+    
+    full_join(pivot_table_long, psp_candidates, by = c("row_id", "year"))
   })
 )
 
