@@ -729,7 +729,9 @@ mun_data <- list(
                             JMENO),
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
-                               PRIJMENI)) %>%
+                               PRIJMENI), 
+             POVOLANI = NA, 
+             BYDLISTEN = NA) %>%
       extract_titles_from_last_name()
   }),
   
@@ -848,7 +850,9 @@ mun_data <- list(
       left_join(., cpp, by = "PSTRANA") %>%
       left_join(., cns, by = "NSTRANA") %>%
       mutate(row_id = row_number(), 
-             ROK_NAROZENI = 2022 - VEK) %>%
+             ROK_NAROZENI = 2022 - VEK, 
+             PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
+             MANDAT = ifelse(MANDAT == "N", 0, 1)) %>%
       merge_and_recode_titles
   }),
   
@@ -867,6 +871,346 @@ mun_data <- list(
   tar_target(mc_2018, filter_city_districts(mun_2018, district_municipalities_map)),
   tar_target(mc_2022, filter_city_districts(mun_2022, district_municipalities_map)),
   
+  tar_target(mc_panel, {
+    mc_94_98 <- match_mun_data(mc_1994, mc_1998)
+    
+    mc_98_02 <- match_mun_data(mc_1998, mc_2002)
+    
+    mc_94_02 <- match_mun_data(
+      mc_1994 %>% 
+        filter(!row_id %in% mc_94_98$row_id.x), 
+      mc_2002 %>% 
+        filter(!row_id %in% mc_98_02$row_id.y)
+    )
+    
+    mc_02_06 <- match_mun_data(mc_2002, mc_2006)
+    
+    mc_98_06 <- match_mun_data(
+      mc_1998 %>% 
+        filter(!row_id %in% mc_98_02$row_id.x), 
+      mc_2006 %>% 
+        filter(!row_id %in% mc_02_06$row_id.y)
+    )
+    
+    mc_94_06 <- match_mun_data(
+      mc_1994 %>% 
+        filter(!row_id %in% mc_94_98$row_id.x) %>% 
+        filter(!row_id %in% mc_94_02$row_id.x), 
+      mc_2006 %>% 
+        filter(!row_id %in% mc_98_06$row_id.y) %>% 
+        filter(!row_id %in% mc_02_06$row_id.y)
+    )
+    
+    mc_06_10 <- match_mun_data(mc_2006, mc_2010)
+    
+    mc_02_10 <- match_mun_data(
+      mc_2002 %>% 
+        filter(!row_id %in% mc_02_06$row_id.x), 
+      mc_2010 %>% 
+        filter(!row_id %in% mc_06_10$row_id.y)
+    )
+    
+    mc_98_10 <- match_mun_data(
+      mc_1998 %>% 
+        filter(!row_id %in% mc_98_02$row_id.x) %>% 
+        filter(!row_id %in% mc_98_06$row_id.x), 
+      mc_2010 %>% 
+        filter(!row_id %in% mc_02_10$row_id.y) %>% 
+        filter(!row_id %in% mc_06_10$row_id.y)
+    )
+    
+    mc_94_10 <- match_mun_data(
+      mc_1994 %>% 
+        filter(!row_id %in% mc_94_98$row_id.x) %>% 
+        filter(!row_id %in% mc_94_02$row_id.x) %>% 
+        filter(!row_id %in% mc_94_06$row_id.x),
+      mc_2010 %>% 
+        filter(!row_id %in% mc_98_10$row_id.y) %>% 
+        filter(!row_id %in% mc_02_10$row_id.y) %>% 
+        filter(!row_id %in% mc_06_10$row_id.y)
+    )
+    
+    mc_10_14 <- match_mun_data(mc_2010, mc_2014)
+    
+    mc_06_14 <- match_mun_data(
+      mc_2006 %>% 
+        filter(!row_id %in% mc_06_10$row_id.x), 
+      mc_2014 %>% 
+        filter(!row_id %in% mc_10_14$row_id.y)
+    )
+    
+    mc_02_14 <- match_mun_data(
+      mc_2002 %>% 
+        filter(!row_id %in% mc_02_06$row_id.x) %>% 
+        filter(!row_id %in% mc_02_10$row_id.x), 
+      mc_2014 %>% 
+        filter(!row_id %in% mc_06_14$row_id.y) %>% 
+        filter(!row_id %in% mc_10_14$row_id.y)
+    )
+    
+    mc_98_14 <- match_mun_data(
+      mc_1998 %>% 
+        filter(!row_id %in% mc_98_02$row_id.x) %>% 
+        filter(!row_id %in% mc_98_06$row_id.x) %>% 
+        filter(!row_id %in% mc_98_10$row_id.x), 
+      mc_2014 %>% 
+        filter(!row_id %in% mc_02_14$row_id.y) %>% 
+        filter(!row_id %in% mc_06_14$row_id.y) %>% 
+        filter(!row_id %in% mc_10_14$row_id.y)
+    )
+    
+    mc_94_14 <- match_mun_data(
+      mc_1994 %>% 
+        filter(!row_id %in% mc_94_98$row_id.x) %>% 
+        filter(!row_id %in% mc_94_02$row_id.x) %>% 
+        filter(!row_id %in% mc_94_06$row_id.x) %>% 
+        filter(!row_id %in% mc_94_10$row_id.x), 
+      mc_2014 %>% 
+        filter(!row_id %in% mc_98_14$row_id.y) %>% 
+        filter(!row_id %in% mc_02_14$row_id.y) %>% 
+        filter(!row_id %in% mc_06_14$row_id.y) %>% 
+        filter(!row_id %in% mc_10_14$row_id.y)
+    )
+    
+    mc_14_18 <- match_mun_data(mc_2014, mc_2018)
+    
+    mc_10_18 <- match_mun_data(
+      mc_2010 %>% 
+        filter(!row_id %in% mc_10_14$row_id.x), 
+      mc_2018 %>% 
+        filter(!row_id %in% mc_14_18$row_id.y)
+    )
+    
+    mc_06_18 <- match_mun_data(
+      mc_2006 %>% 
+        filter(!row_id %in% mc_06_10$row_id.x) %>% 
+        filter(!row_id %in% mc_06_14$row_id.x), 
+      mc_2018 %>% 
+        filter(!row_id %in% mc_10_18$row_id.y) %>% 
+        filter(!row_id %in% mc_14_18$row_id.y)
+    )
+    
+    mc_02_18 <- match_mun_data(
+      mc_2002 %>% 
+        filter(!row_id %in% mc_02_06$row_id.x) %>% 
+        filter(!row_id %in% mc_02_10$row_id.x) %>% 
+        filter(!row_id %in% mc_02_14$row_id.x), 
+      mc_2018 %>% 
+        filter(!row_id %in% mc_06_18$row_id.y) %>% 
+        filter(!row_id %in% mc_10_18$row_id.y) %>% 
+        filter(!row_id %in% mc_14_18$row_id.y)
+    )
+    
+    mc_98_18 <- match_mun_data(
+      mc_1998 %>% 
+        filter(!row_id %in% mc_98_02$row_id.x) %>% 
+        filter(!row_id %in% mc_98_06$row_id.x) %>% 
+        filter(!row_id %in% mc_98_10$row_id.x) %>% 
+        filter(!row_id %in% mc_98_14$row_id.x), 
+      mc_2018 %>% 
+        filter(!row_id %in% mc_02_18$row_id.y) %>% 
+        filter(!row_id %in% mc_06_18$row_id.y) %>% 
+        filter(!row_id %in% mc_10_18$row_id.y) %>% 
+        filter(!row_id %in% mc_14_18$row_id.y)
+    )
+    
+    mc_94_18 <- match_mun_data(
+      mc_1994 %>% 
+        filter(!row_id %in% mc_94_98$row_id.y) %>% 
+        filter(!row_id %in% mc_94_02$row_id.x) %>% 
+        filter(!row_id %in% mc_94_06$row_id.x) %>% 
+        filter(!row_id %in% mc_94_10$row_id.x) %>% 
+        filter(!row_id %in% mc_94_14$row_id.x), 
+      mc_2018 %>% 
+        filter(!row_id %in% mc_98_18$row_id.y) %>% 
+        filter(!row_id %in% mc_02_18$row_id.y) %>% 
+        filter(!row_id %in% mc_06_18$row_id.y) %>% 
+        filter(!row_id %in% mc_10_18$row_id.y) %>% 
+        filter(!row_id %in% mc_14_18$row_id.y)
+    )
+    
+    mc_18_22 <- match_mun_data(mc_2018, mc_2022)
+    
+    mc_14_22 <- match_mun_data(
+      mc_2014 %>% 
+        filter(!row_id %in% mc_14_18$row_id.x),
+      mc_2022 %>% 
+        filter(!row_id %in% mc_18_22$row_id.y)
+    )
+    
+    mc_10_22 <- match_mun_data(
+      mc_2010 %>% 
+        filter(!row_id %in% mc_10_14$row_id.x) %>% 
+        filter(!row_id %in% mc_10_18$row_id.x),
+      mc_2022 %>% 
+        filter(!row_id %in% mc_14_22$row_id.y) %>% 
+        filter(!row_id %in% mc_18_22$row_id.y)
+    )
+    
+    mc_06_22 <- match_mun_data(
+      mc_2006 %>% 
+        filter(!row_id %in% mc_06_10$row_id.x) %>% 
+        filter(!row_id %in% mc_06_14$row_id.x) %>% 
+        filter(!row_id %in% mc_06_18$row_id.x),
+      mc_2022 %>% 
+        filter(!row_id %in% mc_10_22$row_id.y) %>% 
+        filter(!row_id %in% mc_14_22$row_id.y) %>% 
+        filter(!row_id %in% mc_18_22$row_id.y)
+    )
+    
+    mc_02_22 <- match_mun_data(
+      mc_2002 %>% 
+        filter(!row_id %in% mc_02_06$row_id.x) %>% 
+        filter(!row_id %in% mc_02_10$row_id.x) %>% 
+        filter(!row_id %in% mc_02_14$row_id.x) %>% 
+        filter(!row_id %in% mc_02_18$row_id.x),
+      mc_2022 %>% 
+        filter(!row_id %in% mc_06_22$row_id.y) %>% 
+        filter(!row_id %in% mc_10_22$row_id.y) %>% 
+        filter(!row_id %in% mc_14_22$row_id.y) %>% 
+        filter(!row_id %in% mc_18_22$row_id.y)
+    )
+    
+    mc_98_22 <- match_mun_data(
+      mc_1998 %>% 
+        filter(!row_id %in% mc_98_02$row_id.x) %>% 
+        filter(!row_id %in% mc_98_06$row_id.x) %>% 
+        filter(!row_id %in% mc_98_10$row_id.x) %>% 
+        filter(!row_id %in% mc_98_14$row_id.x) %>% 
+        filter(!row_id %in% mc_98_18$row_id.x),
+      mc_2022 %>% 
+        filter(!row_id %in% mc_02_22$row_id.y) %>% 
+        filter(!row_id %in% mc_06_22$row_id.y) %>% 
+        filter(!row_id %in% mc_10_22$row_id.y) %>% 
+        filter(!row_id %in% mc_14_22$row_id.y) %>% 
+        filter(!row_id %in% mc_18_22$row_id.y)
+    )
+    
+    mc_94_22 <- match_mun_data(
+      mc_1994 %>% 
+        filter(!row_id %in% mc_94_98$row_id.x) %>% 
+        filter(!row_id %in% mc_94_02$row_id.x) %>% 
+        filter(!row_id %in% mc_94_06$row_id.x) %>% 
+        filter(!row_id %in% mc_94_10$row_id.x) %>% 
+        filter(!row_id %in% mc_94_14$row_id.x) %>% 
+        filter(!row_id %in% mc_94_18$row_id.x),
+      mc_2022 %>% 
+        filter(!row_id %in% mc_98_22$row_id.y) %>% 
+        filter(!row_id %in% mc_02_22$row_id.y) %>% 
+        filter(!row_id %in% mc_06_22$row_id.y) %>% 
+        filter(!row_id %in% mc_10_22$row_id.y) %>% 
+        filter(!row_id %in% mc_14_22$row_id.y) %>% 
+        filter(!row_id %in% mc_18_22$row_id.y)
+    )
+    
+    mc_94_98b <- mc_94_98 %>% select(row_id_1994 = row_id.x, row_id_1998 = row_id.y)
+    mc_94_02b <- mc_94_02 %>% select(row_id_1994 = row_id.x, row_id_2002 = row_id.y)
+    mc_94_06b <- mc_94_06 %>% select(row_id_1994 = row_id.x, row_id_2006 = row_id.y)
+    mc_94_10b <- mc_94_10 %>% select(row_id_1994 = row_id.x, row_id_2010 = row_id.y)
+    mc_94_14b <- mc_94_14 %>% select(row_id_1994 = row_id.x, row_id_2014 = row_id.y)
+    mc_94_18b <- mc_94_18 %>% select(row_id_1994 = row_id.x, row_id_2018 = row_id.y)
+    mc_94_22b <- mc_94_22 %>% select(row_id_1994 = row_id.x, row_id_2022 = row_id.y)
+    
+    mc_98_02b <- mc_98_02 %>% select(row_id_1998 = row_id.x, row_id_2002 = row_id.y)
+    mc_98_06b <- mc_98_06 %>% select(row_id_1998 = row_id.x, row_id_2006 = row_id.y)
+    mc_98_10b <- mc_98_10 %>% select(row_id_1998 = row_id.x, row_id_2010 = row_id.y)
+    mc_98_14b <- mc_98_14 %>% select(row_id_1998 = row_id.x, row_id_2014 = row_id.y)
+    mc_98_18b <- mc_98_18 %>% select(row_id_1998 = row_id.x, row_id_2018 = row_id.y)
+    mc_98_22b <- mc_98_22 %>% select(row_id_1998 = row_id.x, row_id_2022 = row_id.y)
+    
+    mc_02_06b <- mc_02_06 %>% select(row_id_2002 = row_id.x, row_id_2006 = row_id.y)
+    mc_02_10b <- mc_02_10 %>% select(row_id_2002 = row_id.x, row_id_2010 = row_id.y)
+    mc_02_14b <- mc_02_14 %>% select(row_id_2002 = row_id.x, row_id_2014 = row_id.y)
+    mc_02_18b <- mc_02_18 %>% select(row_id_2002 = row_id.x, row_id_2018 = row_id.y)
+    mc_02_22b <- mc_02_22 %>% select(row_id_2002 = row_id.x, row_id_2022 = row_id.y)
+    
+    mc_06_10b <- mc_06_10 %>% select(row_id_2006 = row_id.x, row_id_2010 = row_id.y)
+    mc_06_14b <- mc_06_14 %>% select(row_id_2006 = row_id.x, row_id_2014 = row_id.y)
+    mc_06_18b <- mc_06_18 %>% select(row_id_2006 = row_id.x, row_id_2018 = row_id.y)
+    mc_06_22b <- mc_06_22 %>% select(row_id_2006 = row_id.x, row_id_2022 = row_id.y)
+    
+    mc_10_14b <- mc_10_14 %>% select(row_id_2010 = row_id.x, row_id_2014 = row_id.y)
+    mc_10_18b <- mc_10_18 %>% select(row_id_2010 = row_id.x, row_id_2018 = row_id.y)
+    mc_10_22b <- mc_10_22 %>% select(row_id_2010 = row_id.x, row_id_2022 = row_id.y)
+    
+    mc_14_18b <- mc_14_18 %>% select(row_id_2014 = row_id.x, row_id_2018 = row_id.y)
+    mc_14_22b <- mc_14_22 %>% select(row_id_2014 = row_id.x, row_id_2022 = row_id.y)
+    
+    mc_18_22b <- mc_18_22 %>% select(row_id_2018 = row_id.x, row_id_2022 = row_id.y)
+    
+    (pivot_table <- mc_94_98b %>% 
+        bind_rows(., mc_1994 %>% select(row_id_1994 = row_id) %>% 
+                    filter(!row_id_1994 %in% mc_94_98b$row_id_1994)) %>% 
+        full_join(., mc_98_02b %>% 
+                    bind_rows(., mc_1998 %>% select(row_id_1998 = row_id) %>% 
+                                filter(!row_id_1998 %in% mc_98_02b$row_id_1998))) %>% 
+        insert_nonconsecutive(., mc_94_02b, "row_id_1994", "row_id_2002") %>% 
+        full_join(., mc_02_06b %>% 
+                    bind_rows(., mc_2002 %>% select(row_id_2002 = row_id) %>% 
+                                filter(!row_id_2002 %in% mc_02_06b$row_id_2002))) %>% 
+        insert_nonconsecutive(., mc_98_06b, "row_id_1998", "row_id_2006") %>% 
+        insert_nonconsecutive(., mc_94_06b, "row_id_1994", "row_id_2006") %>% 
+        full_join(., mc_06_10b %>% 
+                    bind_rows(., mc_2006 %>% select(row_id_2006 = row_id) %>% 
+                                filter(!row_id_2006 %in% mc_06_10b$row_id_2006))) %>% 
+        insert_nonconsecutive(., mc_02_10b, "row_id_2002", "row_id_2010") %>% 
+        insert_nonconsecutive(., mc_98_10b, "row_id_1998", "row_id_2010") %>% 
+        insert_nonconsecutive(., mc_94_10b, "row_id_1994", "row_id_2010") %>% 
+        full_join(., mc_10_14b %>% 
+                    bind_rows(., mc_2010 %>% select(row_id_2010 = row_id) %>% 
+                                filter(!row_id_2010 %in% mc_10_14b$row_id_2010))) %>% 
+        insert_nonconsecutive(., mc_06_14b, "row_id_2006", "row_id_2014") %>% 
+        insert_nonconsecutive(., mc_02_14b, "row_id_2002", "row_id_2014") %>% 
+        insert_nonconsecutive(., mc_98_14b, "row_id_1998", "row_id_2014") %>% 
+        insert_nonconsecutive(., mc_94_14b, "row_id_1994", "row_id_2014") %>% 
+        full_join(., mc_14_18b %>% 
+                    bind_rows(., mc_2014 %>% select(row_id_2014 = row_id) %>% 
+                                filter(!row_id_2014 %in% mc_14_18b$row_id_2014))) %>% 
+        insert_nonconsecutive(., mc_10_18b, "row_id_2010", "row_id_2018") %>% 
+        insert_nonconsecutive(., mc_06_18b, "row_id_2006", "row_id_2018") %>% 
+        insert_nonconsecutive(., mc_02_18b, "row_id_2002", "row_id_2018") %>% 
+        insert_nonconsecutive(., mc_98_18b, "row_id_1998", "row_id_2018") %>% 
+        insert_nonconsecutive(., mc_94_18b, "row_id_1994", "row_id_2018") %>% 
+        full_join(., mc_18_22b %>% 
+                    bind_rows(., mc_2018 %>% select(row_id_2018 = row_id) %>% 
+                                filter(!row_id_2018 %in% mc_18_22b$row_id_2018))) %>% 
+        insert_nonconsecutive(., mc_14_22b, "row_id_2014", "row_id_2022") %>% 
+        insert_nonconsecutive(., mc_10_22b, "row_id_2010", "row_id_2022") %>% 
+        insert_nonconsecutive(., mc_06_22b, "row_id_2006", "row_id_2022") %>% 
+        insert_nonconsecutive(., mc_02_22b, "row_id_2002", "row_id_2022") %>% 
+        insert_nonconsecutive(., mc_98_22b, "row_id_1998", "row_id_2022") %>% 
+        insert_nonconsecutive(., mc_94_22b, "row_id_1994", "row_id_2022")
+    )
+    
+    pivot_table_long <- pivot_table %>%
+      mutate(person_id = paste0("MC", row_number())) %>% 
+      tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                          values_to = "row_id") %>%
+      filter(!is.na(row_id)) %>%
+      mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+    
+    mc_candidates <- bind_rows(
+      mc_1994 %>% mutate(year = "1994"),
+      mc_1998 %>% mutate(year = "1998"),
+      mc_2002 %>% mutate(year = "2002"),
+      mc_2006 %>% mutate(year = "2006"),
+      mc_2010 %>% mutate(year = "2010"),
+      mc_2014 %>% mutate(year = "2014"),
+      mc_2018 %>% mutate(year = "2018"),
+      mc_2022 %>% mutate(year = "2022")
+    )
+    
+    full_join(pivot_table_long, mc_candidates, by = c("row_id", "year"))
+  }), 
+  
+  tar_target(
+    mc_panel_check, 
+    stopifnot(nrow(mc_panel) == (
+      nrow(mc_1994) + nrow(mc_1998) + nrow(mc_2002) + nrow(mc_2006) +
+        nrow(mc_2010) + nrow(mc_2014) + nrow(mc_2018) + nrow(mc_2022) 
+    ))
+  ),
+  
   # Obce ----------------------------------------
   tar_target(m_1994, filter_municipalities(mun_1994, district_municipalities_map) %>%
                mutate(PRIJMENI = gsub('"o', "ö", PRIJMENI) %>%
@@ -879,9 +1223,349 @@ mun_data <- list(
   tar_target(m_2010, filter_municipalities(mun_2010, district_municipalities_map)),
   tar_target(m_2014, filter_municipalities(mun_2014, district_municipalities_map)),
   tar_target(m_2018, filter_municipalities(mun_2018, district_municipalities_map)),
-  tar_target(m_2022, filter_municipalities(mun_2022, district_municipalities_map))
+  tar_target(m_2022, filter_municipalities(mun_2022, district_municipalities_map)),
   
+  tar_target(
+    m_panel, {
+      m_94_98 <- match_mun_data(m_1994, m_1998)
+      
+      m_98_02 <- match_mun_data(m_1998, m_2002)
+      
+      m_94_02 <- match_mun_data(
+        m_1994 %>% 
+          filter(!row_id %in% m_94_98$row_id.x), 
+        m_2002 %>% 
+          filter(!row_id %in% m_98_02$row_id.y)
+      )
+      
+      m_02_06 <- match_mun_data(m_2002, m_2006)
+      
+      m_98_06 <- match_mun_data(
+        m_1998 %>% 
+          filter(!row_id %in% m_98_02$row_id.x), 
+        m_2006 %>% 
+          filter(!row_id %in% m_02_06$row_id.y)
+      )
+      
+      m_94_06 <- match_mun_data(
+        m_1994 %>% 
+          filter(!row_id %in% m_94_98$row_id.x) %>% 
+          filter(!row_id %in% m_94_02$row_id.x), 
+        m_2006 %>% 
+          filter(!row_id %in% m_98_06$row_id.y) %>% 
+          filter(!row_id %in% m_02_06$row_id.y)
+      )
+      
+      m_06_10 <- match_mun_data(m_2006, m_2010)
+      
+      m_02_10 <- match_mun_data(
+        m_2002 %>% 
+          filter(!row_id %in% m_02_06$row_id.x), 
+        m_2010 %>% 
+          filter(!row_id %in% m_06_10$row_id.y)
+      )
+      
+      m_98_10 <- match_mun_data(
+        m_1998 %>% 
+          filter(!row_id %in% m_98_02$row_id.x) %>% 
+          filter(!row_id %in% m_98_06$row_id.x), 
+        m_2010 %>% 
+          filter(!row_id %in% m_02_10$row_id.y) %>% 
+          filter(!row_id %in% m_06_10$row_id.y)
+      )
+      
+      m_94_10 <- match_mun_data(
+        m_1994 %>% 
+          filter(!row_id %in% m_94_98$row_id.x) %>% 
+          filter(!row_id %in% m_94_02$row_id.x) %>% 
+          filter(!row_id %in% m_94_06$row_id.x),
+        m_2010 %>% 
+          filter(!row_id %in% m_98_10$row_id.y) %>% 
+          filter(!row_id %in% m_02_10$row_id.y) %>% 
+          filter(!row_id %in% m_06_10$row_id.y)
+      )
+      
+      m_10_14 <- match_mun_data(m_2010, m_2014)
+      
+      m_06_14 <- match_mun_data(
+        m_2006 %>% 
+          filter(!row_id %in% m_06_10$row_id.x), 
+        m_2014 %>% 
+          filter(!row_id %in% m_10_14$row_id.y)
+      )
+      
+      m_02_14 <- match_mun_data(
+        m_2002 %>% 
+          filter(!row_id %in% m_02_06$row_id.x) %>% 
+          filter(!row_id %in% m_02_10$row_id.x), 
+        m_2014 %>% 
+          filter(!row_id %in% m_06_14$row_id.y) %>% 
+          filter(!row_id %in% m_10_14$row_id.y)
+      )
+      
+      m_98_14 <- match_mun_data(
+        m_1998 %>% 
+          filter(!row_id %in% m_98_02$row_id.x) %>% 
+          filter(!row_id %in% m_98_06$row_id.x) %>% 
+          filter(!row_id %in% m_98_10$row_id.x), 
+        m_2014 %>% 
+          filter(!row_id %in% m_02_14$row_id.y) %>% 
+          filter(!row_id %in% m_06_14$row_id.y) %>% 
+          filter(!row_id %in% m_10_14$row_id.y)
+      )
+      
+      m_94_14 <- match_mun_data(
+        m_1994 %>% 
+          filter(!row_id %in% m_94_98$row_id.x) %>% 
+          filter(!row_id %in% m_94_02$row_id.x) %>% 
+          filter(!row_id %in% m_94_06$row_id.x) %>% 
+          filter(!row_id %in% m_94_10$row_id.x), 
+        m_2014 %>% 
+          filter(!row_id %in% m_98_14$row_id.y) %>% 
+          filter(!row_id %in% m_02_14$row_id.y) %>% 
+          filter(!row_id %in% m_06_14$row_id.y) %>% 
+          filter(!row_id %in% m_10_14$row_id.y)
+      )
+      
+      m_14_18 <- match_mun_data(m_2014, m_2018)
+      
+      m_10_18 <- match_mun_data(
+        m_2010 %>% 
+          filter(!row_id %in% m_10_14$row_id.x), 
+        m_2018 %>% 
+          filter(!row_id %in% m_14_18$row_id.y)
+      )
+      
+      m_06_18 <- match_mun_data(
+        m_2006 %>% 
+          filter(!row_id %in% m_06_10$row_id.x) %>% 
+          filter(!row_id %in% m_06_14$row_id.x), 
+        m_2018 %>% 
+          filter(!row_id %in% m_10_18$row_id.y) %>% 
+          filter(!row_id %in% m_14_18$row_id.y)
+      )
+      
+      m_02_18 <- match_mun_data(
+        m_2002 %>% 
+          filter(!row_id %in% m_02_06$row_id.x) %>% 
+          filter(!row_id %in% m_02_10$row_id.x) %>% 
+          filter(!row_id %in% m_02_14$row_id.x), 
+        m_2018 %>% 
+          filter(!row_id %in% m_06_18$row_id.y) %>% 
+          filter(!row_id %in% m_10_18$row_id.y) %>% 
+          filter(!row_id %in% m_14_18$row_id.y)
+      )
+      
+      m_98_18 <- match_mun_data(
+        m_1998 %>% 
+          filter(!row_id %in% m_98_02$row_id.x) %>% 
+          filter(!row_id %in% m_98_06$row_id.x) %>% 
+          filter(!row_id %in% m_98_10$row_id.x) %>% 
+          filter(!row_id %in% m_98_14$row_id.x), 
+        m_2018 %>% 
+          filter(!row_id %in% m_02_18$row_id.y) %>% 
+          filter(!row_id %in% m_06_18$row_id.y) %>% 
+          filter(!row_id %in% m_10_18$row_id.y) %>% 
+          filter(!row_id %in% m_14_18$row_id.y)
+      )
+      
+      m_94_18 <- match_mun_data(
+        m_1994 %>% 
+          filter(!row_id %in% m_94_98$row_id.y) %>% 
+          filter(!row_id %in% m_94_02$row_id.x) %>% 
+          filter(!row_id %in% m_94_06$row_id.x) %>% 
+          filter(!row_id %in% m_94_10$row_id.x) %>% 
+          filter(!row_id %in% m_94_14$row_id.x), 
+        m_2018 %>% 
+          filter(!row_id %in% m_98_18$row_id.y) %>% 
+          filter(!row_id %in% m_02_18$row_id.y) %>% 
+          filter(!row_id %in% m_06_18$row_id.y) %>% 
+          filter(!row_id %in% m_10_18$row_id.y) %>% 
+          filter(!row_id %in% m_14_18$row_id.y)
+      )
+      
+      m_18_22 <- match_mun_data(m_2018, m_2022)
+      
+      m_14_22 <- match_mun_data(
+        m_2014 %>% 
+          filter(!row_id %in% m_14_18$row_id.x),
+        m_2022 %>% 
+          filter(!row_id %in% m_18_22$row_id.y)
+      )
+      
+      m_10_22 <- match_mun_data(
+        m_2010 %>% 
+          filter(!row_id %in% m_10_14$row_id.x) %>% 
+          filter(!row_id %in% m_10_18$row_id.x),
+        m_2022 %>% 
+          filter(!row_id %in% m_14_22$row_id.y) %>% 
+          filter(!row_id %in% m_18_22$row_id.y)
+      )
+      
+      m_06_22 <- match_mun_data(
+        m_2006 %>% 
+          filter(!row_id %in% m_06_10$row_id.x) %>% 
+          filter(!row_id %in% m_06_14$row_id.x) %>% 
+          filter(!row_id %in% m_06_18$row_id.x),
+        m_2022 %>% 
+          filter(!row_id %in% m_10_22$row_id.y) %>% 
+          filter(!row_id %in% m_14_22$row_id.y) %>% 
+          filter(!row_id %in% m_18_22$row_id.y)
+      )
+      
+      m_02_22 <- match_mun_data(
+        m_2002 %>% 
+          filter(!row_id %in% m_02_06$row_id.x) %>% 
+          filter(!row_id %in% m_02_10$row_id.x) %>% 
+          filter(!row_id %in% m_02_14$row_id.x) %>% 
+          filter(!row_id %in% m_02_18$row_id.x),
+        m_2022 %>% 
+          filter(!row_id %in% m_06_22$row_id.y) %>% 
+          filter(!row_id %in% m_10_22$row_id.y) %>% 
+          filter(!row_id %in% m_14_22$row_id.y) %>% 
+          filter(!row_id %in% m_18_22$row_id.y)
+      )
+      
+      m_98_22 <- match_mun_data(
+        m_1998 %>% 
+          filter(!row_id %in% m_98_02$row_id.x) %>% 
+          filter(!row_id %in% m_98_06$row_id.x) %>% 
+          filter(!row_id %in% m_98_10$row_id.x) %>% 
+          filter(!row_id %in% m_98_14$row_id.x) %>% 
+          filter(!row_id %in% m_98_18$row_id.x),
+        m_2022 %>% 
+          filter(!row_id %in% m_02_22$row_id.y) %>% 
+          filter(!row_id %in% m_06_22$row_id.y) %>% 
+          filter(!row_id %in% m_10_22$row_id.y) %>% 
+          filter(!row_id %in% m_14_22$row_id.y) %>% 
+          filter(!row_id %in% m_18_22$row_id.y)
+      )
+      
+      m_94_22 <- match_mun_data(
+        m_1994 %>% 
+          filter(!row_id %in% m_94_98$row_id.x) %>% 
+          filter(!row_id %in% m_94_02$row_id.x) %>% 
+          filter(!row_id %in% m_94_06$row_id.x) %>% 
+          filter(!row_id %in% m_94_10$row_id.x) %>% 
+          filter(!row_id %in% m_94_14$row_id.x) %>% 
+          filter(!row_id %in% m_94_18$row_id.x),
+        m_2022 %>% 
+          filter(!row_id %in% m_98_22$row_id.y) %>% 
+          filter(!row_id %in% m_02_22$row_id.y) %>% 
+          filter(!row_id %in% m_06_22$row_id.y) %>% 
+          filter(!row_id %in% m_10_22$row_id.y) %>% 
+          filter(!row_id %in% m_14_22$row_id.y) %>% 
+          filter(!row_id %in% m_18_22$row_id.y)
+      )
+      
+      m_94_98b <- m_94_98 %>% select(row_id_1994 = row_id.x, row_id_1998 = row_id.y)
+      m_94_02b <- m_94_02 %>% select(row_id_1994 = row_id.x, row_id_2002 = row_id.y)
+      m_94_06b <- m_94_06 %>% select(row_id_1994 = row_id.x, row_id_2006 = row_id.y)
+      m_94_10b <- m_94_10 %>% select(row_id_1994 = row_id.x, row_id_2010 = row_id.y)
+      m_94_14b <- m_94_14 %>% select(row_id_1994 = row_id.x, row_id_2014 = row_id.y)
+      m_94_18b <- m_94_18 %>% select(row_id_1994 = row_id.x, row_id_2018 = row_id.y)
+      m_94_22b <- m_94_22 %>% select(row_id_1994 = row_id.x, row_id_2022 = row_id.y)
+      
+      m_98_02b <- m_98_02 %>% select(row_id_1998 = row_id.x, row_id_2002 = row_id.y)
+      m_98_06b <- m_98_06 %>% select(row_id_1998 = row_id.x, row_id_2006 = row_id.y)
+      m_98_10b <- m_98_10 %>% select(row_id_1998 = row_id.x, row_id_2010 = row_id.y)
+      m_98_14b <- m_98_14 %>% select(row_id_1998 = row_id.x, row_id_2014 = row_id.y)
+      m_98_18b <- m_98_18 %>% select(row_id_1998 = row_id.x, row_id_2018 = row_id.y)
+      m_98_22b <- m_98_22 %>% select(row_id_1998 = row_id.x, row_id_2022 = row_id.y)
+      
+      m_02_06b <- m_02_06 %>% select(row_id_2002 = row_id.x, row_id_2006 = row_id.y)
+      m_02_10b <- m_02_10 %>% select(row_id_2002 = row_id.x, row_id_2010 = row_id.y)
+      m_02_14b <- m_02_14 %>% select(row_id_2002 = row_id.x, row_id_2014 = row_id.y)
+      m_02_18b <- m_02_18 %>% select(row_id_2002 = row_id.x, row_id_2018 = row_id.y)
+      m_02_22b <- m_02_22 %>% select(row_id_2002 = row_id.x, row_id_2022 = row_id.y)
+      
+      m_06_10b <- m_06_10 %>% select(row_id_2006 = row_id.x, row_id_2010 = row_id.y)
+      m_06_14b <- m_06_14 %>% select(row_id_2006 = row_id.x, row_id_2014 = row_id.y)
+      m_06_18b <- m_06_18 %>% select(row_id_2006 = row_id.x, row_id_2018 = row_id.y)
+      m_06_22b <- m_06_22 %>% select(row_id_2006 = row_id.x, row_id_2022 = row_id.y)
+      
+      m_10_14b <- m_10_14 %>% select(row_id_2010 = row_id.x, row_id_2014 = row_id.y)
+      m_10_18b <- m_10_18 %>% select(row_id_2010 = row_id.x, row_id_2018 = row_id.y)
+      m_10_22b <- m_10_22 %>% select(row_id_2010 = row_id.x, row_id_2022 = row_id.y)
+      
+      m_14_18b <- m_14_18 %>% select(row_id_2014 = row_id.x, row_id_2018 = row_id.y)
+      m_14_22b <- m_14_22 %>% select(row_id_2014 = row_id.x, row_id_2022 = row_id.y)
+      
+      m_18_22b <- m_18_22 %>% select(row_id_2018 = row_id.x, row_id_2022 = row_id.y)
+      
+      (pivot_table <- m_94_98b %>% 
+          bind_rows(., m_1994 %>% select(row_id_1994 = row_id) %>% 
+                      filter(!row_id_1994 %in% m_94_98b$row_id_1994)) %>% 
+          full_join(., m_98_02b %>% 
+                      bind_rows(., m_1998 %>% select(row_id_1998 = row_id) %>% 
+                                  filter(!row_id_1998 %in% m_98_02b$row_id_1998))) %>% 
+          insert_nonconsecutive(., m_94_02b, "row_id_1994", "row_id_2002") %>% 
+          full_join(., m_02_06b %>% 
+                      bind_rows(., m_2002 %>% select(row_id_2002 = row_id) %>% 
+                                  filter(!row_id_2002 %in% m_02_06b$row_id_2002))) %>% 
+          insert_nonconsecutive(., m_98_06b, "row_id_1998", "row_id_2006") %>% 
+          insert_nonconsecutive(., m_94_06b, "row_id_1994", "row_id_2006") %>% 
+          full_join(., m_06_10b %>% 
+                      bind_rows(., m_2006 %>% select(row_id_2006 = row_id) %>% 
+                                  filter(!row_id_2006 %in% m_06_10b$row_id_2006))) %>% 
+          insert_nonconsecutive(., m_02_10b, "row_id_2002", "row_id_2010") %>% 
+          insert_nonconsecutive(., m_98_10b, "row_id_1998", "row_id_2010") %>% 
+          insert_nonconsecutive(., m_94_10b, "row_id_1994", "row_id_2010") %>% 
+          full_join(., m_10_14b %>% 
+                      bind_rows(., m_2010 %>% select(row_id_2010 = row_id) %>% 
+                                  filter(!row_id_2010 %in% m_10_14b$row_id_2010))) %>% 
+          insert_nonconsecutive(., m_06_14b, "row_id_2006", "row_id_2014") %>% 
+          insert_nonconsecutive(., m_02_14b, "row_id_2002", "row_id_2014") %>% 
+          insert_nonconsecutive(., m_98_14b, "row_id_1998", "row_id_2014") %>% 
+          insert_nonconsecutive(., m_94_14b, "row_id_1994", "row_id_2014") %>% 
+          full_join(., m_14_18b %>% 
+                      bind_rows(., m_2014 %>% select(row_id_2014 = row_id) %>% 
+                                  filter(!row_id_2014 %in% m_14_18b$row_id_2014))) %>% 
+          insert_nonconsecutive(., m_10_18b, "row_id_2010", "row_id_2018") %>% 
+          insert_nonconsecutive(., m_06_18b, "row_id_2006", "row_id_2018") %>% 
+          insert_nonconsecutive(., m_02_18b, "row_id_2002", "row_id_2018") %>% 
+          insert_nonconsecutive(., m_98_18b, "row_id_1998", "row_id_2018") %>% 
+          insert_nonconsecutive(., m_94_18b, "row_id_1994", "row_id_2018") %>% 
+          full_join(., m_18_22b %>% 
+                      bind_rows(., m_2018 %>% select(row_id_2018 = row_id) %>% 
+                                  filter(!row_id_2018 %in% m_18_22b$row_id_2018))) %>% 
+          insert_nonconsecutive(., m_14_22b, "row_id_2014", "row_id_2022") %>% 
+          insert_nonconsecutive(., m_10_22b, "row_id_2010", "row_id_2022") %>% 
+          insert_nonconsecutive(., m_06_22b, "row_id_2006", "row_id_2022") %>% 
+          insert_nonconsecutive(., m_02_22b, "row_id_2002", "row_id_2022") %>% 
+          insert_nonconsecutive(., m_98_22b, "row_id_1998", "row_id_2022") %>% 
+          insert_nonconsecutive(., m_94_22b, "row_id_1994", "row_id_2022")
+      )
+      
+      pivot_table_long <- pivot_table %>%
+        mutate(person_id = paste0("M", row_number())) %>% 
+        tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                            values_to = "row_id") %>%
+        filter(!is.na(row_id)) %>%
+        mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+      
+      m_candidates <- bind_rows(
+        m_1994 %>% mutate(year = "1994"),
+        m_1998 %>% mutate(year = "1998"),
+        m_2002 %>% mutate(year = "2002"),
+        m_2006 %>% mutate(year = "2006"),
+        m_2010 %>% mutate(year = "2010"),
+        m_2014 %>% mutate(year = "2014"),
+        m_2018 %>% mutate(year = "2018"),
+        m_2022 %>% mutate(year = "2022")
+      )
+      
+      full_join(pivot_table_long, m_candidates, by = c("row_id", "year"))
+    }
+  ),
   
+  tar_target(
+    m_panel_check, 
+    stopifnot(nrow(m_panel) == (
+      nrow(m_1994) + nrow(m_1998) + nrow(m_2002) + nrow(m_2006) +
+        nrow(m_2010) + nrow(m_2014) + nrow(m_2018) + nrow(m_2022) 
+    ))
+  )
 )
 
 ep_data <- list(
