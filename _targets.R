@@ -11,7 +11,7 @@ tar_source()
 # divné tituly jako ak.arch nebo 
 # prom.pedagog => Mgr. (https://cs.wikipedia.org/wiki/Promovan%C3%BD_pr%C3%A1vn%C3%ADk)
 
-# Replace the target list below with your own:
+# Chamber of Deputies ----------------------------------------
 psp_data <- list(
   # TODO: jména krajů
   tar_target(psp_1996, command = {
@@ -456,6 +456,7 @@ psp_data <- list(
   )
 )
 
+# Regional elections --------------------------------------
 reg_data <- list(
   tar_target(reg_2000, command = {
     cpp <- read_cpp(here("data", "KZ2000", "CPPKZ00.xlsx"))
@@ -707,7 +708,7 @@ reg_data <- list(
   )
 )
 
-# TODO: mun_2022
+# Municipal elections -------------------------------------
 mun_data <- list(
   tar_target(mun_1994, command = {
     parties <- read_excel(here("data", "KV1994", "CVSKV94.xlsx"))
@@ -861,7 +862,7 @@ mun_data <- list(
                select(CITY_DISTRICT = CHODNOTA1, 
                       MUNICIPALITY = CHODNOTA2)),
   
-  # Městské části ------------------------------
+  ## City districts ------------------------------
   tar_target(mc_1994, filter_city_districts(mun_1994, district_municipalities_map)),
   tar_target(mc_1998, filter_city_districts(mun_1998, district_municipalities_map)),
   tar_target(mc_2002, filter_city_districts(mun_2002, district_municipalities_map)),
@@ -1179,7 +1180,15 @@ mun_data <- list(
         insert_nonconsecutive(., mc_06_22b, "row_id_2006", "row_id_2022") %>% 
         insert_nonconsecutive(., mc_02_22b, "row_id_2002", "row_id_2022") %>% 
         insert_nonconsecutive(., mc_98_22b, "row_id_1998", "row_id_2022") %>% 
-        insert_nonconsecutive(., mc_94_22b, "row_id_1994", "row_id_2022")
+        insert_nonconsecutive(., mc_94_22b, "row_id_1994", "row_id_2022") %>% 
+        bind_rows(., mc_2022 %>% select(row_id_2022 = row_id) %>%
+                    filter(!row_id_2022 %in% c(mc_18_22b$row_id_2022, 
+                                               mc_14_22b$row_id_2022, 
+                                               mc_10_22b$row_id_2022, 
+                                               mc_06_22b$row_id_2022, 
+                                               mc_02_22b$row_id_2022, 
+                                               mc_98_22b$row_id_2022, 
+                                               mc_94_22b$row_id_2022)))
     )
     
     pivot_table_long <- pivot_table %>%
@@ -1211,7 +1220,7 @@ mun_data <- list(
     ))
   ),
   
-  # Obce ----------------------------------------
+  ## Municipalities ---------------------------------------
   tar_target(m_1994, filter_municipalities(mun_1994, district_municipalities_map) %>%
                mutate(PRIJMENI = gsub('"o', "ö", PRIJMENI) %>%
                         gsub('o"', "ö", .) %>%
@@ -1534,7 +1543,15 @@ mun_data <- list(
           insert_nonconsecutive(., m_06_22b, "row_id_2006", "row_id_2022") %>% 
           insert_nonconsecutive(., m_02_22b, "row_id_2002", "row_id_2022") %>% 
           insert_nonconsecutive(., m_98_22b, "row_id_1998", "row_id_2022") %>% 
-          insert_nonconsecutive(., m_94_22b, "row_id_1994", "row_id_2022")
+          insert_nonconsecutive(., m_94_22b, "row_id_1994", "row_id_2022") %>% 
+          bind_rows(., m_2022 %>% select(row_id_2022 = row_id) %>%
+                      filter(!row_id_2022 %in% c(m_18_22b$row_id_2022, 
+                                                 m_14_22b$row_id_2022, 
+                                                 m_10_22b$row_id_2022, 
+                                                 m_06_22b$row_id_2022, 
+                                                 m_02_22b$row_id_2022, 
+                                                 m_98_22b$row_id_2022, 
+                                                 m_94_22b$row_id_2022)))
       )
       
       pivot_table_long <- pivot_table %>%
@@ -1568,6 +1585,7 @@ mun_data <- list(
   )
 )
 
+# EP elections --------------------------------------------
 ep_data <- list(
   tar_target(ep_2004, command = {
     parties <- read_parties_xml(here("data", "EP2004", "EP2004reg", "eprkl.xml"), 
@@ -1737,10 +1755,732 @@ ep_data <- list(
   )
 )
 
+# Senate elections ----------------------------------------
+senate_data <- list(
+  tar_target(
+    senate_df, {
+      candidates <- read_excel("data/SE1996_2022/serk.xlsx")
+      
+      cpp <- read_cpp("data/SE1996_2022/SENAT_cisel_20230227_xlsx/cpp.xlsx")
+      cns <- read_cns("data/SE1996_2022/SENAT_cisel_20230227_xlsx/cns.xlsx")
+      
+      left_join(candidates, cpp, by = "PSTRANA") %>% 
+        left_join(., cns, by = "NSTRANA") %>% 
+        mutate(
+          year = floor(DATUMVOLEB/10000),
+          ROK_NAROZENI = year - VEK
+        )
+    }
+  ), 
+  
+  tar_target(
+    byelection_dates, {
+      election_dates <- read_excel("data/SE1996_2022/SENAT_cisel_20230227_xlsx/sedatumvoleb.xlsx")
+      
+      election_dates %>% 
+        filter(!is.na(POPIS_CZ)) %>% 
+        pull(DATUMVOLEB)
+    }
+  ), 
+  
+  tar_target(
+    # check that multiple by-election were not hold in the same Senate district
+    byelection_districts_unique, {
+      stopifnot(senate_df %>% 
+        filter(DATUMVOLEB %in% byelection_dates) %>% 
+        select(DATUMVOLEB, OBVOD) %>% 
+        unique() %>% 
+        count(OBVOD, sort = TRUE) %>% 
+        pull(n) %>% 
+        all(. == 1))
+    }
+  ),
+  
+  tar_target(
+    regular_elections, {
+      election_dates <- read_excel("data/SE1996_2022/SENAT_cisel_20230227_xlsx/sedatumvoleb.xlsx")
+      
+      election_dates %>% 
+        filter(is.na(POPIS_CZ)) %>% 
+        pull(DATUMVOLEB)
+  }), 
+  
+  tar_target(
+    sen_1996, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 19961116)
+    }
+  ),
+  
+  tar_target(
+    sen_1996a, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 19961116) %>% 
+        filter(OBVOD %in% sen_1998$OBVOD) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_1996b, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 19961116) %>% 
+        filter(OBVOD %in% sen_2000$OBVOD) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_1996c, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 19961116) %>% 
+        filter(OBVOD %in% sen_2002$OBVOD) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_1998, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 19981114) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2000, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20001112) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2002, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20021025) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2004, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20041105) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2006, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20061020) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2008, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20081017) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2010, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20101015) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2012, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20121012) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2014, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20141010) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2016, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20161007) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2018, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20181005) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2020, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20201002) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_2022, {
+      senate_df %>% 
+        filter(DATUMVOLEB == 20220923) %>% 
+        mutate(row_id = row_number())
+    }
+  ),
+  
+  tar_target(
+    sen_panel, {
+      # A districts
+      sa_96_98 <- match_sen_data(sen_1996a, sen_1998)
+      
+      sa_98_04 <- match_sen_data(sen_1998, sen_2004)
+      sa_96_04 <- match_sen_data(
+        sen_1996a %>% 
+          filter(!row_id %in% sa_96_98$row_id.x), 
+        sen_2004 %>% 
+          filter(!row_id %in% sa_98_04$row_id.y)
+      )
+      
+      sa_04_10 <- match_sen_data(sen_2004, sen_2010)
+      sa_98_10 <- match_sen_data(
+        sen_1998 %>% 
+          filter(!row_id %in% sa_98_04$row_id.x), 
+        sen_2010 %>% 
+          filter(!row_id %in% sa_04_10$row_id.y)
+      )
+      
+      sa_96_10 <- match_sen_data(
+        sen_1996a %>% 
+          filter(!row_id %in% sa_96_98$row_id.x) %>% 
+          filter(!row_id %in% sa_96_04$row_id.x), 
+        sen_2010 %>% 
+          filter(!row_id %in% sa_98_10$row_id.y) %>% 
+          filter(!row_id %in% sa_04_10$row_id.y)
+      )
+      
+      sa_10_16 <- match_sen_data(sen_2010, sen_2016)
+      sa_04_16 <- match_sen_data(
+        sen_2004 %>% 
+          filter(!row_id %in% sa_04_10$row_id.x), 
+        sen_2016 %>% 
+          filter(!row_id %in% sa_10_16$row_id.y)
+      )
+      
+      sa_98_16 <- match_sen_data(
+        sen_1998 %>% 
+          filter(!row_id %in% sa_98_04$row_id.x) %>% 
+          filter(!row_id %in% sa_98_10$row_id.x), 
+        sen_2016 %>% 
+          filter(!row_id %in% sa_04_16$row_id.y) %>% 
+          filter(!row_id %in% sa_10_16$row_id.y)
+      )
+      
+      sa_96_16 <- match_sen_data(
+        sen_1996a %>% 
+          filter(!row_id %in% sa_96_98$row_id.x) %>% 
+          filter(!row_id %in% sa_96_04$row_id.x) %>% 
+          filter(!row_id %in% sa_96_10$row_id.x), 
+        sen_2016 %>% 
+          filter(!row_id %in% sa_98_16$row_id.y) %>% 
+          filter(!row_id %in% sa_04_16$row_id.y) %>% 
+          filter(!row_id %in% sa_10_16$row_id.y)
+      )
+      
+      sa_16_22 <- match_sen_data(sen_2016, sen_2022)
+      sa_10_22 <- match_sen_data(
+        sen_2010 %>% 
+          filter(!row_id %in% sa_10_16$row_id.x), 
+        sen_2022 %>% 
+          filter(!row_id %in% sa_16_22$row_id.y)
+      )
+      
+      sa_04_22 <- match_sen_data(
+        sen_2004 %>% 
+          filter(!row_id %in% sa_04_10$row_id.x) %>% 
+          filter(!row_id %in% sa_04_16$row_id.x), 
+        sen_2022 %>% 
+          filter(!row_id %in% sa_10_22$row_id.y) %>% 
+          filter(!row_id %in% sa_16_22$row_id.y)
+      )
+      
+      sa_98_22 <- match_sen_data(
+        sen_1998 %>% 
+          filter(!row_id %in% sa_98_04$row_id.x) %>% 
+          filter(!row_id %in% sa_98_10$row_id.x) %>% 
+          filter(!row_id %in% sa_98_16$row_id.x), 
+        sen_2022 %>% 
+          filter(!row_id %in% sa_04_22$row_id.y) %>% 
+          filter(!row_id %in% sa_10_22$row_id.y) %>% 
+          filter(!row_id %in% sa_16_22$row_id.y)
+      )
+      
+      sa_96_22 <- match_sen_data(
+        sen_1996a %>% 
+          filter(!row_id %in% sa_96_98$row_id.x) %>% 
+          filter(!row_id %in% sa_96_04$row_id.x) %>% 
+          filter(!row_id %in% sa_96_10$row_id.x) %>% 
+          filter(!row_id %in% sa_96_16$row_id.x), 
+        sen_2022 %>% 
+          filter(!row_id %in% sa_98_22$row_id.y) %>% 
+          filter(!row_id %in% sa_04_22$row_id.y) %>% 
+          filter(!row_id %in% sa_10_22$row_id.y) %>% 
+          filter(!row_id %in% sa_16_22$row_id.y)
+      )
+      
+      sa_96_98b <- sa_96_98 %>% select(row_id_1996 = row_id.x, row_id_1998 = row_id.y)
+      sa_96_04b <- sa_96_04 %>% select(row_id_1996 = row_id.x, row_id_2004 = row_id.y)
+      sa_96_10b <- sa_96_10 %>% select(row_id_1996 = row_id.x, row_id_2010 = row_id.y)
+      sa_96_16b <- sa_96_16 %>% select(row_id_1996 = row_id.x, row_id_2016 = row_id.y)
+      sa_96_22b <- sa_96_22 %>% select(row_id_1996 = row_id.x, row_id_2022 = row_id.y)
+      
+      sa_98_04b <- sa_98_04 %>% select(row_id_1998 = row_id.x, row_id_2004 = row_id.y)
+      sa_98_10b <- sa_98_10 %>% select(row_id_1998 = row_id.x, row_id_2010 = row_id.y)
+      sa_98_16b <- sa_98_16 %>% select(row_id_1998 = row_id.x, row_id_2016 = row_id.y)
+      sa_98_22b <- sa_98_22 %>% select(row_id_1998 = row_id.x, row_id_2022 = row_id.y)
+      
+      sa_04_10b <- sa_04_10 %>% select(row_id_2004 = row_id.x, row_id_2010 = row_id.y)
+      sa_04_16b <- sa_04_16 %>% select(row_id_2004 = row_id.x, row_id_2016 = row_id.y)
+      sa_04_22b <- sa_04_22 %>% select(row_id_2004 = row_id.x, row_id_2022 = row_id.y)
+      
+      sa_10_16b <- sa_10_16 %>% select(row_id_2010 = row_id.x, row_id_2016 = row_id.y)
+      sa_10_22b <- sa_10_22 %>% select(row_id_2010 = row_id.x, row_id_2022 = row_id.y)
+      
+      sa_16_22b <- sa_16_22 %>% select(row_id_2016 = row_id.x, row_id_2022 = row_id.y)
+      
+      
+      (pivot_table_a <- sa_96_98b %>% 
+          bind_rows(., sen_1996a %>% select(row_id_1996 = row_id) %>% 
+                      filter(!row_id_1996 %in% sa_96_98b$row_id_1996)) %>% 
+          full_join(., sa_98_04b %>% 
+                      bind_rows(., sen_1998 %>% select(row_id_1998 = row_id) %>% 
+                                  filter(!row_id_1998 %in% sa_98_04b$row_id_1998))) %>% 
+          insert_nonconsecutive(., sa_96_04b, "row_id_1996", "row_id_2004") %>% 
+          full_join(., sa_04_10b %>% 
+                      bind_rows(., sen_2004 %>% select(row_id_2004 = row_id) %>% 
+                                  filter(!row_id_2004 %in% sa_04_10b$row_id_2004))) %>% 
+          insert_nonconsecutive(., sa_96_10b, "row_id_1996", "row_id_2010") %>% 
+          insert_nonconsecutive(., sa_98_10b, "row_id_1998", "row_id_2010") %>% 
+          full_join(., sa_10_16b %>% 
+                      bind_rows(., sen_2010 %>% select(row_id_2010 = row_id) %>% 
+                                  filter(!row_id_2010 %in% sa_10_16b$row_id_2010))) %>% 
+          insert_nonconsecutive(., sa_96_16b, "row_id_1996", "row_id_2016") %>% 
+          insert_nonconsecutive(., sa_98_16b, "row_id_1998", "row_id_2016") %>% 
+          insert_nonconsecutive(., sa_04_16b, "row_id_2004", "row_id_2016") %>% 
+          full_join(., sa_16_22b %>% 
+                      bind_rows(., sen_2016 %>% select(row_id_2016 = row_id) %>% 
+                                  filter(!row_id_2016 %in% sa_16_22b$row_id_2016))) %>% 
+          insert_nonconsecutive(., sa_96_22b, "row_id_1996", "row_id_2022") %>% 
+          insert_nonconsecutive(., sa_98_22b, "row_id_1998", "row_id_2022") %>% 
+          insert_nonconsecutive(., sa_04_22b, "row_id_2004", "row_id_2022") %>% 
+          insert_nonconsecutive(., sa_10_22b, "row_id_2010", "row_id_2022") %>% 
+          bind_rows(., sen_2022 %>% select(row_id_2022 = row_id) %>%
+                      filter(!row_id_2022 %in% c(sa_16_22b$row_id_2022, 
+                                                 sa_10_22b$row_id_2022, 
+                                                 sa_04_22b$row_id_2022, 
+                                                 sa_98_22b$row_id_2022, 
+                                                 sa_96_22b$row_id_2022)))
+      )
+      
+      pivot_table_long_a <- pivot_table_a %>%
+        mutate(person_id = paste0("SA", row_number())) %>% 
+        tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                            values_to = "row_id") %>%
+        filter(!is.na(row_id)) %>%
+        mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+      
+      sa_candidates <- bind_rows(
+        sen_1996a %>% mutate(year = "1996"),
+        sen_1998 %>% mutate(year = "1998"),
+        sen_2004 %>% mutate(year = "2004"),
+        sen_2010 %>% mutate(year = "2010"),
+        sen_2016 %>% mutate(year = "2016"),
+        sen_2022 %>% mutate(year = "2022")
+      )
+      
+      sen_panel_a <- full_join(pivot_table_long_a, sa_candidates, by = c("row_id", "year"))
+      
+      # SB ----------------------------------------------------------------------
+      sb_96_00 <- match_sen_data(sen_1996b, sen_2000)
+      
+      sb_00_06 <- match_sen_data(sen_2000, sen_2006)
+      
+      sb_96_06 <- match_sen_data(
+        sen_1996b %>% 
+          filter(!row_id %in% sb_96_00$row_id.x), 
+        sen_2006 %>% 
+          filter(!row_id %in% sb_00_06$row_id.y)
+      )
+      
+      sb_06_12 <- match_sen_data(sen_2006, sen_2012)
+      
+      sb_00_12 <- match_sen_data(
+        sen_2000 %>% 
+          filter(!row_id %in% sb_00_06$row_id.x),
+        sen_2012 %>% 
+          filter(!row_id %in% sb_06_12$row_id.y)
+      )
+      
+      sb_96_12 <- match_sen_data(
+        sen_1996b %>% 
+          filter(!row_id %in% sb_96_00$row_id.x) %>% 
+          filter(!row_id %in% sb_96_06$row_id.x),
+        sen_2012 %>% 
+          filter(!row_id %in% sb_00_12$row_id.y) %>% 
+          filter(!row_id %in% sb_06_12$row_id.y)
+      )
+      
+      sb_12_18 <- match_sen_data(sen_2012, sen_2018)
+      
+      sb_06_18 <- match_sen_data(
+        sen_2006 %>% 
+          filter(!row_id %in% sb_06_12$row_id.x),
+        sen_2018 %>% 
+          filter(!row_id %in% sb_12_18$row_id.y)
+      )
+      
+      sb_00_18 <- match_sen_data(
+        sen_2000 %>% 
+          filter(!row_id %in% sb_00_06$row_id.x) %>% 
+          filter(!row_id %in% sb_00_12$row_id.x),
+        sen_2018 %>% 
+          filter(!row_id %in% sb_06_18$row_id.y) %>% 
+          filter(!row_id %in% sb_12_18$row_id.y)
+      )
+      
+      sb_96_18 <- match_sen_data(
+        sen_1996b %>% 
+          filter(!row_id %in% sb_96_00$row_id.x) %>% 
+          filter(!row_id %in% sb_96_06$row_id.x) %>% 
+          filter(!row_id %in% sb_96_12$row_id.x),
+        sen_2018 %>% 
+          filter(!row_id %in% sb_00_18$row_id.y) %>% 
+          filter(!row_id %in% sb_06_18$row_id.y) %>% 
+          filter(!row_id %in% sb_12_18$row_id.y)
+      )
+      
+      sb_96_00b <- sb_96_00 %>% select(row_id_1996 = row_id.x, row_id_2000 = row_id.y)
+      sb_96_06b <- sb_96_06 %>% select(row_id_1996 = row_id.x, row_id_2006 = row_id.y)
+      sb_96_12b <- sb_96_12 %>% select(row_id_1996 = row_id.x, row_id_2012 = row_id.y)
+      sb_96_18b <- sb_96_18 %>% select(row_id_1996 = row_id.x, row_id_2018 = row_id.y)
+      
+      sb_00_06b <- sb_00_06 %>% select(row_id_2000 = row_id.x, row_id_2006 = row_id.y)
+      sb_00_12b <- sb_00_12 %>% select(row_id_2000 = row_id.x, row_id_2012 = row_id.y)
+      sb_00_18b <- sb_00_18 %>% select(row_id_2000 = row_id.x, row_id_2018 = row_id.y)
+      
+      sb_06_12b <- sb_06_12 %>% select(row_id_2006 = row_id.x, row_id_2012 = row_id.y)
+      sb_06_18b <- sb_06_18 %>% select(row_id_2006 = row_id.x, row_id_2018 = row_id.y)
+      
+      sb_12_18b <- sb_12_18 %>% select(row_id_2012 = row_id.x, row_id_2018 = row_id.y)
+      
+      (pivot_table_b <- sb_96_00b %>% 
+          bind_rows(., sen_1996b %>% select(row_id_1996 = row_id) %>% 
+                      filter(!row_id_1996 %in% sb_96_00b$row_id_1996)) %>% 
+          full_join(., sb_00_06b %>% 
+                      bind_rows(., sen_2000 %>% select(row_id_2000 = row_id) %>% 
+                                  filter(!row_id_2000 %in% sb_00_06b$row_id_2000))) %>% 
+          insert_nonconsecutive(., sb_96_06b, "row_id_1996", "row_id_2006") %>% 
+          full_join(., sb_06_12b %>% 
+                      bind_rows(., sen_2006 %>% select(row_id_2006 = row_id) %>% 
+                                  filter(!row_id_2006 %in% sb_06_12b$row_id_2006))) %>% 
+          insert_nonconsecutive(., sb_96_12b, "row_id_1996", "row_id_2012") %>% 
+          insert_nonconsecutive(., sb_00_12b, "row_id_2000", "row_id_2012") %>% 
+          full_join(., sb_12_18b %>% 
+                      bind_rows(., sen_2012 %>% select(row_id_2012 = row_id) %>% 
+                                  filter(!row_id_2012 %in% sb_12_18b$row_id_2012))) %>% 
+          insert_nonconsecutive(., sb_96_18b, "row_id_1996", "row_id_2018") %>% 
+          insert_nonconsecutive(., sb_00_18b, "row_id_2000", "row_id_2018") %>% 
+          insert_nonconsecutive(., sb_06_18b, "row_id_2006", "row_id_2018") %>% 
+          bind_rows(., sen_2018 %>% select(row_id_2018 = row_id) %>%
+                      filter(!row_id_2018 %in% c(sb_12_18b$row_id_2018, 
+                                                 sb_06_18b$row_id_2018, 
+                                                 sb_00_18b$row_id_2018, 
+                                                 sb_96_18b$row_id_2018)))
+        
+      )
+      
+      pivot_table_long_b <- pivot_table_b %>%
+        mutate(person_id = paste0("SB", row_number())) %>% 
+        tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                            values_to = "row_id") %>%
+        filter(!is.na(row_id)) %>%
+        mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+      
+      sb_candidates <- bind_rows(
+        sen_1996b %>% mutate(year = "1996"),
+        sen_2000 %>% mutate(year = "2000"),
+        sen_2006 %>% mutate(year = "2006"),
+        sen_2012 %>% mutate(year = "2012"),
+        sen_2018 %>% mutate(year = "2018")
+      )
+      
+      sen_panel_b <- full_join(pivot_table_long_b, sb_candidates, by = c("row_id", "year"))
+      
+      # SC ----------------------------------------------------------------------
+      sc_96_02 <- match_sen_data(sen_1996c, sen_2002)
+      
+      sc_02_08 <- match_sen_data(sen_2002, sen_2008)
+      
+      sc_96_08 <- match_sen_data(
+        sen_1996c %>% 
+          filter(!row_id %in% sc_96_02$row_id.x),
+        sen_2008 %>% 
+          filter(!row_id %in% sc_02_08$row_id.y)
+      )
+      
+      sc_08_14 <- match_sen_data(sen_2008, sen_2014)
+      
+      sc_02_14 <- match_sen_data(
+        sen_2002 %>% 
+          filter(!row_id %in% sc_02_08$row_id.x),
+        sen_2014 %>% 
+          filter(!row_id %in% sc_08_14$row_id.y)
+      )
+      
+      sc_96_14 <- match_sen_data(
+        sen_1996c %>% 
+          filter(!row_id %in% sc_96_02$row_id.x) %>% 
+          filter(!row_id %in% sc_96_08$row_id.x),
+        sen_2014 %>% 
+          filter(!row_id %in% sc_02_14$row_id.y) %>% 
+          filter(!row_id %in% sc_08_14$row_id.y)
+      )
+      
+      sc_14_20 <- match_sen_data(sen_2014, sen_2020)
+      
+      sc_08_20 <- match_sen_data(
+        sen_2008 %>% 
+          filter(!row_id %in% sc_08_14$row_id.x),
+        sen_2020 %>% 
+          filter(!row_id %in% sc_14_20$row_id.y)
+      )
+      
+      sc_02_20 <- match_sen_data(
+        sen_2002 %>% 
+          filter(!row_id %in% sc_02_08$row_id.x) %>% 
+          filter(!row_id %in% sc_02_14$row_id.x),
+        sen_2020 %>% 
+          filter(!row_id %in% sc_08_20$row_id.y) %>% 
+          filter(!row_id %in% sc_14_20$row_id.y)
+      )
+      
+      sc_96_20 <- match_sen_data(
+        sen_1996c %>% 
+          filter(!row_id %in% sc_96_02$row_id.x) %>% 
+          filter(!row_id %in% sc_96_08$row_id.x) %>% 
+          filter(!row_id %in% sc_96_14$row_id.x),
+        sen_2020 %>% 
+          filter(!row_id %in% sc_02_20$row_id.y) %>% 
+          filter(!row_id %in% sc_08_20$row_id.y) %>% 
+          filter(!row_id %in% sc_14_20$row_id.y)
+      )
+      
+      sc_96_02b <- sc_96_02 %>% select(row_id_1996 = row_id.x, row_id_2002 = row_id.y)
+      sc_96_08b <- sc_96_08 %>% select(row_id_1996 = row_id.x, row_id_2008 = row_id.y)
+      sc_96_14b <- sc_96_14 %>% select(row_id_1996 = row_id.x, row_id_2014 = row_id.y)
+      sc_96_20b <- sc_96_20 %>% select(row_id_1996 = row_id.x, row_id_2020 = row_id.y)
+      
+      sc_02_08b <- sc_02_08 %>% select(row_id_2002 = row_id.x, row_id_2008 = row_id.y)
+      sc_02_14b <- sc_02_14 %>% select(row_id_2002 = row_id.x, row_id_2014 = row_id.y)
+      sc_02_20b <- sc_02_20 %>% select(row_id_2002 = row_id.x, row_id_2020 = row_id.y)
+      
+      sc_08_14b <- sc_08_14 %>% select(row_id_2008 = row_id.x, row_id_2014 = row_id.y)
+      sc_08_20b <- sc_08_20 %>% select(row_id_2008 = row_id.x, row_id_2020 = row_id.y)
+      
+      sc_14_20b <- sc_14_20 %>% select(row_id_2014 = row_id.x, row_id_2020 = row_id.y)
+      
+      (pivot_table_c <- sc_96_02b %>% 
+          bind_rows(., sen_1996c %>% select(row_id_1996 = row_id) %>% 
+                      filter(!row_id_1996 %in% sc_96_02b$row_id_1996)) %>% 
+          full_join(., sc_02_08b %>% 
+                      bind_rows(., sen_2002 %>% select(row_id_2002 = row_id) %>% 
+                                  filter(!row_id_2002 %in% sc_02_08b$row_id_2002))) %>% 
+          insert_nonconsecutive(., sc_96_08b, "row_id_1996", "row_id_2008") %>% 
+          full_join(., sc_08_14b %>% 
+                      bind_rows(., sen_2008 %>% select(row_id_2008 = row_id) %>% 
+                                  filter(!row_id_2008 %in% sc_08_14b$row_id_2008))) %>% 
+          insert_nonconsecutive(., sc_96_14b, "row_id_1996", "row_id_2014") %>% 
+          insert_nonconsecutive(., sc_02_14b, "row_id_2002", "row_id_2014") %>% 
+          full_join(., sc_14_20b %>% 
+                      bind_rows(., sen_2014 %>% select(row_id_2014 = row_id) %>% 
+                                  filter(!row_id_2014 %in% sc_14_20b$row_id_2014))) %>% 
+          insert_nonconsecutive(., sc_96_20b, "row_id_1996", "row_id_2020") %>% 
+          insert_nonconsecutive(., sc_02_20b, "row_id_2002", "row_id_2020") %>% 
+          insert_nonconsecutive(., sc_08_20b, "row_id_2008", "row_id_2020") %>% 
+          bind_rows(., sen_2020 %>% select(row_id_2020 = row_id) %>%
+                      filter(!row_id_2020 %in% c(sc_14_20b$row_id_2020, 
+                                                 sc_08_20b$row_id_2020, 
+                                                 sc_02_20b$row_id_2020, 
+                                                 sc_96_20b$row_id_2020)))
+      )
+      
+      pivot_table_long_c <- pivot_table_c %>%
+        mutate(person_id = paste0("SC", row_number())) %>% 
+        tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "year",
+                            values_to = "row_id") %>%
+        filter(!is.na(row_id)) %>%
+        mutate(year = stringr::str_extract(year, "[0-9]{4}"))
+      
+      sc_candidates <- bind_rows(
+        sen_1996c %>% mutate(year = "1996"),
+        sen_2002 %>% mutate(year = "2002"),
+        sen_2008 %>% mutate(year = "2008"),
+        sen_2014 %>% mutate(year = "2014"),
+        sen_2020 %>% mutate(year = "2020")
+      )
+      
+      sen_panel_c <- full_join(pivot_table_long_c, sc_candidates, by = c("row_id", "year"))
+      
+      sen_byelection <- senate_df %>% 
+        filter(DATUMVOLEB %in% byelection_dates) %>% 
+        mutate(
+          row_id = row_number(), 
+          person_id = paste0("B", row_id)
+        )
+      
+      sen_a_b <- match_sen_data(sen_panel_a, sen_panel_b, c("JMENO", "PRIJMENI"))
+      sen_b_c <- match_sen_data(sen_panel_b, sen_panel_c, c("JMENO", "PRIJMENI"))
+      sen_a_c <- match_sen_data(sen_panel_a, sen_panel_c, c("JMENO", "PRIJMENI"))
+      
+      sen_a_b_pivot <- sen_a_b %>% 
+        select(person_id.x, person_id.y) %>% 
+        unique() 
+      
+      sen_b_c_pivot <- sen_b_c %>% 
+        select(person_id.x, person_id.y) %>% 
+        unique() 
+      
+      sen_a_c_pivot <- sen_a_c %>% 
+        select(person_id.x, person_id.y) %>% 
+        unique() 
+      
+      tmp <- sen_a_b_pivot %>% 
+        rename(sen_a_id = person_id.x, sen_b_id = person_id.y) %>% 
+        bind_rows(., sen_panel_a %>% 
+                    select(sen_a_id = person_id) %>% 
+                    unique() %>% 
+                    filter(!sen_a_id %in% sen_a_b_pivot$person_id.x)) %>% 
+        full_join(., 
+                  sen_b_c_pivot %>% 
+                    rename(sen_b_id = person_id.x, sen_c_id = person_id.y) %>% 
+                    bind_rows(., sen_panel_b %>% 
+                                select(sen_b_id = person_id) %>% 
+                                unique() %>% 
+                                filter(!sen_b_id %in% sen_b_c_pivot$person_id.x))
+        ) %>% 
+        insert_nonconsecutive(., sen_a_c_pivot %>% rename(sen_a_id = person_id.x, 
+                                                          sen_c_id = person_id.y), 
+                              "sen_a_id", "sen_c_id") %>% 
+        bind_rows(., sen_panel_c %>% 
+                    select(sen_c_id = person_id) %>% 
+                    unique() %>% 
+                    filter(!sen_c_id %in% c(sen_b_c_pivot$person_id.y, 
+                                            sen_a_c_pivot$person_id.y)))
+      
+      pivot_tmp_long <- tmp %>%
+        mutate(person_id = paste0("SN", row_number())) %>% 
+        tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "panel",
+                            values_to = "panel_id") %>%
+        filter(!is.na(panel_id))
+      
+      sen_panel_candidates <- bind_rows(
+        sen_panel_a %>% mutate(panel = "sen_a_id") %>% rename(panel_id = person_id),
+        sen_panel_b %>% mutate(panel = "sen_b_id") %>% rename(panel_id = person_id),
+        sen_panel_c %>% mutate(panel = "sen_c_id") %>% rename(panel_id = person_id)
+      )
+      
+      senate_panel <- full_join(pivot_tmp_long, sen_panel_candidates, by = c("panel_id", "panel"))
+      
+      sen_byel <- match_sen_data(senate_panel, sen_byelection)
+      
+      sen_byel_b <- sen_byel %>% select(panel_id = person_id.x, byel_id = person_id.y)
+      sen_byel_pivot_long <- sen_byel_b %>% 
+        bind_rows(., senate_panel %>% 
+                    select(panel_id = person_id) %>% 
+                    unique() %>% 
+                    filter(!panel_id %in% sen_byel_b$panel_id)) %>% 
+        bind_rows(., sen_byelection %>% 
+                    select(byel_id = person_id) %>% 
+                    filter(!byel_id %in% sen_byel_b$byel_id)) %>% 
+        mutate(person_id = paste0("SEN", row_number())) %>% 
+        tidyr::pivot_longer(., cols = 1:(ncol(.)-1), names_to = "panel",
+                            values_to = "panel_id") %>%
+        filter(!is.na(panel_id))
+      
+      sen_all_candidates <- bind_rows(
+        senate_panel %>% 
+          mutate(panel = "panel_id") %>% 
+          mutate(year = as.numeric(year)) %>% 
+          select(-panel_id), 
+        sen_byelection %>% 
+          mutate(panel = "byel_id")
+      )
+      
+      full_join(sen_byel_pivot_long, sen_all_candidates, by = c("panel_id"="person_id", "panel")) %>% 
+        arrange(person_id, year) %>% 
+        select(-c(panel, panel_id))
+      
+    }
+  ),
+  
+  tar_target(
+    sen_panel_check, 
+    stopifnot(nrow(senate_df) == nrow(sen_panel))
+  ),
+  
+  NULL
+)
+
+# Summary stats -------------------------------------------
+summary_stats <- list(
+  tar_target(n_candidates, {
+    bind_rows(
+      psp_panel %>% count(year) %>% 
+        mutate(year = paste0("PS ", year)),
+      reg_panel %>% count(year) %>% 
+        mutate(year = paste0("Reg. ", year)),
+      ep_panel %>% count(year) %>% 
+        mutate(year = paste0("EP ", year)), 
+      m_panel %>% 
+        count(year) %>% 
+        mutate(year = paste0("Municipal ", year)), 
+      mc_panel %>% 
+        count(year) %>% 
+        mutate(year = paste0("City districts ", year)),
+    )
+  }),
+  
+  tar_target(n_candidates_xlsx, {
+    writexl::write_xlsx(n_candidates, "figs/n_candidates.xlsx")
+  }), 
+  
+  tar_target(n_candidates_tex, {
+    knitr::kable(n_candidates, col.names = c("Election", "N of candidates"), 
+                 format = "latex") %>% 
+      writeLines(., "figs/n_candidates.tex")
+  })
+)
+
 list(
   psp_data, 
   reg_data, 
   mun_data, 
-  ep_data
+  ep_data, 
+  senate_data,
+  summary_stats
 )
 
