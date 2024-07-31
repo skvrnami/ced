@@ -3,13 +3,16 @@ library(targets)
 library(tarchetypes) # Load other packages as needed.
 
 tar_option_set(packages = c("dplyr", "rvest", "here", # "listr", 
-                            "readxl", "readr", "reclin2"))
+                            "readxl", "readr", "reclin2", 
+                            "tidyr"))
 
 tar_source()
 
 # TODO: kategorizace titulů
 # divné tituly jako ak.arch nebo 
 # prom.pedagog => Mgr. (https://cs.wikipedia.org/wiki/Promovan%C3%BD_pr%C3%A1vn%C3%ADk)
+
+# TODO: Pernes má v r. 1994 titul v PRIJMENI
 
 # Chamber of Deputies ----------------------------------------
 psp_data <- list(
@@ -2114,7 +2117,7 @@ senate_data <- list(
       
       sen_panel_a <- full_join(pivot_table_long_a, sa_candidates, by = c("row_id", "year"))
       
-      # SB ----------------------------------------------------------------------
+      ## SB ----------------------------------------------------------------------
       sb_96_00 <- match_sen_data(sen_1996b, sen_2000)
       
       sb_00_06 <- match_sen_data(sen_2000, sen_2006)
@@ -2437,9 +2440,19 @@ senate_data <- list(
     }
   ),
   
+  # check, že se nikdo neztratil
   tar_target(
     sen_panel_check, 
     stopifnot(nrow(senate_df) == nrow(sen_panel))
+  ),
+  
+  # check, že nikdo nekandidoval 2x ve stejných volbách
+  tar_target(
+    sen_panel_check_unique_date_per_person, {
+      stopifnot(sen_panel %>% 
+                  count(person_id, DATUMVOLEB, sort = TRUE) %>% 
+                  pull(n) %>% all(. == 1))
+    }
   ),
   
   NULL
@@ -2475,12 +2488,232 @@ summary_stats <- list(
   })
 )
 
+# Matching panels together --------------------------------
+matched_panels <- list(
+  # Městské části - Obce 
+  tar_target(
+    mc_mun_panel, {
+      mc_obec <- read_csv("data/mcast_obec.csv", locale = locale(encoding = "WINDOWS-1250")) %>% 
+        select(MC_KODZASTUP = CHODNOTA1, KODZASTUP = CHODNOTA2)
+      
+      mc_panel_harm <- mc_panel %>% 
+        rename(MC_KODZASTUP = KODZASTUP) %>% 
+        left_join(mc_obec, by = "MC_KODZASTUP")
+      
+      match_m_mc <- match_mun_panel_data(m_panel, mc_panel_harm)
+      
+      x_multiple <- match_m_mc %>%
+        select(person_id.x, person_id.y) %>%
+        unique() %>% 
+        count(person_id.x) %>% 
+        filter(n > 1)
+      
+      y_multiple <- match_m_mc %>%
+        select(person_id.x, person_id.y) %>%
+        unique() %>% 
+        count(person_id.y) %>% 
+        filter(n > 1)
+      
+      stopifnot(match_m_mc %>% 
+        select(person_id.x, person_id.y) %>%
+        unique() %>% 
+        filter(person_id.x %in% x_multiple & 
+                 person_id.y %in% y_multiple) %>% 
+        nrow() == 0)
+      
+      unique_ids <- match_m_mc %>%
+        group_by(person_id.x, person_id.y) %>%
+        summarise(score = max(score), .groups = "drop")
+      
+      x_unique <- unique_ids %>% 
+        filter(person_id.x %in% x_multiple$person_id.x) %>% 
+        group_by(person_id.x) %>% 
+        summarise(person_id.y = list(person_id.y), 
+                  score = list(score)) %>% 
+        mutate(person_id.x = as.list(person_id.x))
+      
+      y_unique <- unique_ids %>% 
+        filter(person_id.y %in% y_multiple$person_id.y) %>% 
+        group_by(person_id.y) %>% 
+        summarise(person_id.x = list(person_id.x), 
+                  score = list(score)) %>% 
+        mutate(person_id.y = as.list(person_id.y))
+      
+      both_unique <- unique_ids %>% 
+        filter(!(person_id.y %in% y_multiple$person_id.y | 
+                   person_id.x %in% x_multiple$person_id.x)) %>% 
+        mutate(person_id.x = as.list(person_id.x), 
+               person_id.y = as.list(person_id.y), 
+               score = as.list(score))
+      
+      # FIXME: unique candidacies in election
+      #' u x_unique a y_unique checknout jestli není overlap 
+      #' ve volbách (2x jedny volby)
+      #' nechat skóre, pokud je overlap, brát ten match s max. skórem
+      m_volby <- m_panel %>% 
+        group_by(person_id) %>% summarise(year.x = list(year))
+      mc_volby <- mc_panel %>% 
+        group_by(person_id) %>% summarise(year.y = list(year))
+      
+      tmp <- bind_rows(
+        x_unique, 
+        y_unique, 
+        both_unique
+      ) %>% 
+        # bind_rows(., missing_x) %>% 
+        # bind_rows(., missing_y) %>% 
+        mutate(panel_id = paste0("MM", row_number())) %>% 
+        unnest(c(person_id.x, person_id.y, score)) %>% 
+        left_join(., mc_volby, by = c("person_id.y"="person_id")) %>% 
+        left_join(., m_volby, by = c("person_id.x"="person_id")) %>% 
+        group_by(panel_id, person_id.x) %>% 
+        mutate(n_y = length(unique(person_id.y))) %>% 
+        group_by(panel_id, person_id.y) %>% 
+        mutate(n_x = length(unique(person_id.x)))
+      
+      tmp_y <- tmp %>% filter(n_y > 1)
+      y_keep <- tmp_y %>% 
+        unnest(year.y) %>% 
+        group_by(panel_id) %>% 
+        mutate(
+          n = n(), 
+          unique_years = length(unique(year.y)), 
+          intersection = n != unique_years,
+          exclude = intersection & score != max(score)) %>%
+        filter(!exclude) %>% 
+        ungroup()
+      
+      tmp_x <- tmp %>% filter(n_x > 1)
+      x_keep <- tmp_x %>% 
+        anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>% 
+        unnest(year.x) %>% 
+        group_by(panel_id) %>% 
+        mutate(
+          n = n(), 
+          unique_years = length(unique(year.x)), 
+          intersection = n != unique_years,
+          exclude = intersection & score != max(score)) %>%
+        filter(!exclude) %>% 
+        ungroup()
+      
+      all_unique <- bind_rows(
+        x_keep %>% 
+          select(-c(year.x, year.y)) %>% 
+          select(person_id.x, person_id.y) %>% 
+          unique() %>% 
+          group_by(person_id.y) %>% 
+          summarise(person_id.x = list(person_id.x), .groups = "drop") %>% 
+          mutate(person_id.y = as.list(person_id.y)), 
+        y_keep %>% 
+          select(-c(year.x, year.y)) %>% 
+          select(person_id.x, person_id.y) %>% 
+          unique() %>% 
+          group_by(person_id.x) %>% 
+          summarise(person_id.y = list(person_id.y), .groups = "drop") %>% 
+          mutate(person_id.x = as.list(person_id.x)), 
+        tmp %>% 
+          ungroup %>% 
+          filter(n_x == 1, n_y == 1) %>% 
+          select(person_id.x, person_id.y) %>% 
+          mutate(across(everything(), as.list))
+      )
+      
+      missing_x <- m_panel %>% 
+        filter(!person_id %in% unlist(all_unique$person_id.x)) %>% 
+        select(person_id.x = person_id) %>% 
+        unique() %>% 
+        mutate(person_id.x = as.list(person_id.x))
+      
+      missing_y <- mc_panel %>% 
+        filter(!person_id %in% unlist(all_unique$person_id.y)) %>% 
+        select(person_id.y = person_id) %>% 
+        unique() %>% 
+        mutate(person_id.y = as.list(person_id.y))
+      
+      pivot_table <- all_unique %>% 
+        bind_rows(., missing_x) %>% 
+        bind_rows(., missing_y) %>% 
+        mutate(panel_id = paste0("MM", row_number())) %>% 
+        unnest(c(person_id.x, person_id.y)) %>% 
+        pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset", 
+                     values_to = "person_id") %>% 
+        select(-dataset) %>% 
+        unique() %>% 
+        filter(!is.na(person_id))
+      
+      all_candidates <- 
+        bind_rows(
+          m_panel %>% mutate(election = paste0("M", year)), 
+          mc_panel_harm %>% mutate(election = paste0("MC", year))
+        )
+      
+      duplicates <- pivot_table %>% 
+        count(person_id, sort = TRUE) %>% 
+        filter(n > 1)
+      
+      # TODO: check jestli nekandidovali ve stejných volbách 2x
+      pivot_table2 <- pivot_table
+      for(i in duplicates$person_id){
+        check_ids <- pivot_table %>% 
+          group_by(panel_id) %>% 
+          filter(any(person_id == i))
+        (check_df <- all_candidates %>% 
+          filter(person_id %in% check_ids$person_id) %>% 
+          select(year, election, JMENO, PRIJMENI, POVOLANI, ROK_NAROZENI, ZKRATKAN8, 
+                 ZKRATKAP8))
+        
+        ok <- (anyDuplicated(check_df$election) == 0)
+        if(ok){
+          pivot_table2 <- pivot_table2 %>% 
+            group_by(panel_id) %>% 
+            mutate(change = any(person_id == i)) %>% 
+            ungroup %>% 
+            group_by(change) %>% 
+            mutate(panel_id = if_else(change, head(panel_id, 1), panel_id))
+        }else{
+          stop("Error")
+        }
+      }
+      
+      pivot_table_final <- pivot_table2 %>% 
+        ungroup %>% 
+        select(panel_id, person_id) %>% 
+        unique()
+      
+      # pivot_table_final      
+      bind_rows(
+        m_panel,
+        mc_panel_harm
+      ) %>%
+        full_join(., pivot_table_final, by = "person_id",
+                  relationship = "many-to-one") %>%
+        select(panel_id, person_id, everything())
+    }
+  ),
+  
+  tar_target(
+    mc_mun_check, 
+    stopifnot(
+      nrow(mc_mun_panel) == (nrow(m_panel) + nrow(mc_panel))
+    )
+  )
+  
+  # Panel - Kraje
+  
+  # Panel - PSP
+  
+  # Panel - Senát
+  
+  # Panel - EP
+)
+
 list(
   psp_data, 
   reg_data, 
   mun_data, 
   ep_data, 
   senate_data,
+  matched_panels, 
   summary_stats
 )
 
