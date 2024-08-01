@@ -38,7 +38,9 @@ sort polparty surname firstname birthdate year
 
 gen donation_all = financial_donation + nonfinancial_donation
 
-collapse (first) id acadegree_an acadegree_bn (sum) donation_all financial_donation nonfinancial_donation, by(polparty surname firstname birthdate year)
+gen i = 1
+
+collapse (first) id acadegree_an acadegree_bn (sum) i donation_all financial_donation nonfinancial_donation, by(polparty surname firstname birthdate year)
 
 save data_donation_final.dta, replace
  
