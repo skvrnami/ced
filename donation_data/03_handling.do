@@ -1,13 +1,13 @@
-use donation_data.dta, clear 
+foreach d of global donationform {
 
+dis "`d'"
+	
+use "donation_data_`d'.dta", clear 
 
 label define polparty 1 "kducsl" 2 "kscm" 3 "ods" 4 "pirati" 5 "spd" 6 "stan" 7 "top09" 8 "ano" 9 "cssd"
 label values polparty polparty
 
 sort polparty surname firstname birthdate year
-
-gen donated_value = 0
-replace donated_value = částkaKč 
 
 gen acadegree_an = "."
 replace acadegree_an = titulza 
@@ -20,39 +20,11 @@ replace acadegree_bn = "." if acadegree_bn == ""
 tostring acadegree_an, replace 
 tostring acadegree_bn, replace 
 
-keep acadegree_an acadegree_bn donated_value surname year firstname birthdate polparty
-	
-				
-*replace donated_value = 0 if donated_value == . 
-*replace gratuitous_performance = 0 if gratuitous_performance == .
+gen `d'_donation = .
+replace `d'_donation = částkaKč if částkaKč !=. 
+replace `d'_donation = hodnotaBÚPKč if hodnotaBÚPKč !=. 
 
-*g donation_all = donated_value + gratuitous_performance
-
-*gen dropet = 0
-*replace dropet = 1 if strpos(firstname, "et") > 0
-
-replace firstname = "Jiří" if firstname == "jiří"
-replace firstname = "Štěpánka" if firstname == "Štef."
-replace firstname = "Ignác" if firstname == "ignác"
-replace firstname = "Petr" if firstname == "petr"
-replace firstname = "Petra" if firstname == "petra"
-replace firstname = "Pavlína" if firstname == "Pavlína Šetková"
-replace surname = "Németh" if firstname == "Németh" & birthdate == td(24aug1959)
-replace firstname = "Karel" if surname == "Németh" & birthdate == td(24aug1959)
-replace surname = "Cvetan" if firstname == "Cvetan" & birthdate == td(17sep1976)
-replace firstname = "Martin" if surname == "Cvetan" & birthdate == td(17sep1976)
-replace surname = "Tetík" if firstname == "Tetík" & birthdate == td(22jul1974)
-replace firstname = "Rudolf" if surname ==  "Tetík" & birthdate == td(22jul1974)
-replace surname = "Petira" if firstname == "Petira" & birthdate == td(20nov1941)
-replace firstname = "Václav" if surname == "Petira" & birthdate == td(20nov1941)
-replace surname = "Lačňák" if firstname == "Lačňák" & birthdate == td(22apr1971)
-replace firstname = "Jan, Mgr., MBA" if surname == "Lačňák" & birthdate == td(22apr1971)
-replace surname = "Poukar" if firstname == "Poukar" & birthdate == td(02jun1955)
-replace firstname = "Jan" if surname == "Poukar" & birthdate == td(02jun1955)
-replace surname = "Staněk" if firstname == "Staněk" & birthdate == td(06dec1940)
-replace firstname = "Jan" if surname == "Staněk" & birthdate == td(06dec1940)
-replace surname = "Zugar" if firstname == "Zugar" & birthdate == td(06apr1987)
-replace firstname = "Jan" if surname == "Zugar" & birthdate == td(06apr1987)
+keep surname firstname acadegree_an acadegree_bn birthdate year polparty `d'_donation
 
 drop if surname == "anonym" | surname == "test" | surname == "Test" | surname == "stojkov"
 
@@ -69,10 +41,6 @@ foreach t of global tituly_an {
 	replace acadegree_an = "`t'" if strpos(surname, "`t'") > 0
   } 
  
-replace firstname = "Robert" if surname == "Huneš" & birthdate == td(09nov1968)
-replace firstname = "Pavel" if firstname == "Pavel,MVDr., Ph.D, M"
-
-
 replace firstname = subinstr(firstname, " Bc.","", .)
 replace firstname = subinstr(firstname, " MUDr.","", .)
 replace firstname = subinstr(firstname, " JUDr.","", .)
@@ -147,6 +115,9 @@ replace firstname = subinstr(firstname, ".","", .)
 replace firstname = subinstr(firstname, ",","", .)
 replace firstname = subinstr(firstname, ",,","", .)
 
+
+replace firstname = "Robert" if surname == "Huneš" & birthdate == td(09nov1968)
+replace firstname = "Pavel" if firstname == "Pavel,MVDr., Ph.D, M"
 replace firstname = "Vladimír" if firstname == "Vladimít"
 replace surname = "Aulická Jírovcová" if surname == "Aulická -Jírovcová"
 replace surname = "Hemzáčková" if surname == "Hemzáková"
@@ -223,8 +194,6 @@ replace surname = "Haváč" if firstname == "Haváč" & birthdate == td(03sep198
 replace firstname = "Ondřej" if firstname == "Haváč" & birthdate == td(03sep1985)
 replace surname = "Kolínský" if firstname == "Kolínský" & birthdate == td(11mar1990)
 replace firstname = "Ondřej" if firstname == "Kolínský" & birthdate == td(11mar1990)
-
-
 replace surname = "Stalčík" if firstname == "stalčík" & birthdate == td(31oct1975)
 replace firstname = "Adam" if firstname == "stalčík" & birthdate == td(31oct1975)
 replace surname = "Balogová" if surname == "balogova" & birthdate == td(02sep1994)
@@ -235,7 +204,6 @@ replace surname = "Fafi" if surname == "fafi" & birthdate == td(03jul1990)
 replace surname = "Fischer" if surname == "fischer" & birthdate == td(14oct1965)
 replace surname = "Fojtek" if surname == "fojtek" & birthdate == td(07jan1969)
 replace firstname = "Martin" if firstname == "martin" & birthdate == td(07jan1969)
-
 replace surname = "Frauknecht" if surname == "frauknecht"
 replace surname = "Gronych" if surname == "gronych" 
 replace surname = "Hanzal" if surname == "hanzal" 
@@ -902,6 +870,349 @@ replace firstname = "Martin" if firstname == "Mgr Martin"
 replace surname = "Kočí Palkovská" if surname == "Kočí  Palkovská"
 replace surname = "Rozmajzl" if surname == "Rozmajzl st."
 replace surname = "Dušková - Smrčková" if surname == "Dušková,Smrčková" | surname == "Dušková, Smrčková"
+replace firstname = "Jiří" if firstname == "jiří"
+replace firstname = "Štěpánka" if firstname == "Štef."
+replace firstname = "Ignác" if firstname == "ignác"
+replace firstname = "Petr" if firstname == "petr"
+replace firstname = "Petra" if firstname == "petra"
+replace firstname = "Pavlína" if firstname == "Pavlína Šetková"
+
+
+replace surname = "Németh" if firstname == "Németh" & birthdate == td(24aug1959)
+replace firstname = "Karel" if surname == "Németh" & birthdate == td(24aug1959)
+replace surname = "Cvetan" if firstname == "Cvetan" & birthdate == td(17sep1976)
+replace firstname = "Martin" if surname == "Cvetan" & birthdate == td(17sep1976)
+replace surname = "Tetík" if firstname == "Tetík" & birthdate == td(22jul1974)
+replace firstname = "Rudolf" if surname ==  "Tetík" & birthdate == td(22jul1974)
+replace surname = "Petira" if firstname == "Petira" & birthdate == td(20nov1941)
+replace firstname = "Václav" if surname == "Petira" & birthdate == td(20nov1941)
+replace surname = "Lačňák" if firstname == "Lačňák" & birthdate == td(22apr1971)
+replace firstname = "Jan, Mgr., MBA" if surname == "Lačňák" & birthdate == td(22apr1971)
+replace surname = "Poukar" if firstname == "Poukar" & birthdate == td(02jun1955)
+replace firstname = "Jan" if surname == "Poukar" & birthdate == td(02jun1955)
+replace surname = "Staněk" if firstname == "Staněk" & birthdate == td(06dec1940)
+replace firstname = "Jan" if surname == "Staněk" & birthdate == td(06dec1940)
+replace surname = "Zugar" if firstname == "Zugar" & birthdate == td(06apr1987)
+replace firstname = "Jan" if surname == "Zugar" & birthdate == td(06apr1987)
+replace surname = "Bradáč" if firstname == "Bradáč" & birthdate == td(28aug1956)
+replace firstname = "František" if firstname == "Bradáč" & birthdate == td(28aug1956)
+replace surname = "Vávra" if firstname == "Vávra" & birthdate == td(26jan1967)
+replace firstname = "Radek" if surname == "Vávra" & birthdate == td(26jan1967)
+replace surname = "Vávra" if firstname == "Vávra" & birthdate == td(12sep1983)
+replace firstname = "Radek" if surname == "Vávra" & birthdate == td(12sep1983)
+
+replace surname = "Jošt" if surname == "Jost"
+replace surname = "Julínková" if surname == "Julinkova"
+replace surname = "Pecićová" if surname == "Pecicova"
+
+
+replace surname = "Drastík" if surname == "Drastik" & birthdate == td(29aug1965)
+replace surname = "Dželinová" if surname == "Dželiová" & birthdate == td(15mar1971)
+replace surname = "Hauzner" if surname == "Hausner" & birthdate == td(15mar1975)
+replace surname = "Kajprt" if surname == "Kajpr" & birthdate == td(27jun1969)
+replace surname = "Kauzlaričová" if surname == "Kauzarovičková" & birthdate == td(28nov1961)
+replace surname = "Kostelňák" if surname == "Kostelník" & birthdate == td(06oct1954)
+replace surname = "Löwenthalová" if surname == "Löwenthálová" & birthdate == td(10dec1969)
+replace surname = "Malchar" if surname == "Malcher" & birthdate == td(10oct1941)
+replace surname = "Nácerová" if surname == "Nácalová" & birthdate == td(06jun1944)
+replace surname = "Putlík" if surname == "Pytlík" & birthdate == td(26jul1956)
+replace surname = "Stankayová" if surname == "Stankyová" & birthdate == td(26jan1979)
+replace surname = "Topinková" if surname == "Topinkovvá" & birthdate == td(01jun1956)
+replace surname = "Vondrášková" if surname == "Vondrášová" & birthdate == td(04mar1959)
+replace surname = "Vycudiliková" if surname == "Vychodilová" & birthdate == td(10nov1950)
+replace surname = "Čomová" if surname == "Čoková" & birthdate == td(25jun1938)
+replace surname = "Zachariaš" if surname == "Zachariáš" & birthdate == td(28apr1993)
+replace surname = "Břicháček" if surname == "Břichacek" & birthdate == td(05oct1976)
+replace surname = "Frolík" if surname == "Frolik" & birthdate == td(04apr1963)
+replace surname = "Slovák" if surname == "Slovak" & birthdate == td(08mar1959)
+replace surname = "Chlupáček" if surname == "Chlupacek" & birthdate == td(07sep1986)
+replace surname = "Davidová" if surname == "Davidova" & birthdate == td(07jul1990)
+replace surname = "Dřevikovský" if surname == "Dřevíkovský" & birthdate == td(07jul1995)
+replace surname = "Frýbortová" if surname == "Frýbortova" & birthdate == td(09apr1967)
+replace surname = "Haisová" if surname == "Haisova" & birthdate == td(20feb1987)
+replace surname = "Hanzlík" if surname == "Hanzlik" & birthdate == td(04mar1992)
+replace surname = "Herbrichová" if surname == "Herbrichova" & birthdate == td(13jun1979)
+replace surname = "Jechová" if surname == "Jechova" & birthdate == td(03dec1984)
+replace surname = "Kadaník" if surname == "Kadanik" & birthdate == td(03aug1982)
+replace surname = "Macinský" if surname == "Macinsky" & birthdate == td(07mar1984)
+replace surname = "Naiclerová" if surname == "Naicerová" & birthdate == td(20jun1962)
+replace surname = "Pavlovič" if surname == "Pavlovic" & birthdate == td(15may1984)
+replace surname = "Popová" if surname == "Popova" & birthdate == td(13jun1976)
+replace surname = "Poživilová Michailidu" if surname == "Poživilová" & birthdate == td(20aug1980)
+replace surname = "Prokšová Zuská" if surname == "Prokšová" & birthdate == td(21jul1986)
+replace surname = "Rozhoň" if surname == "Rozhon" & birthdate == td(03jan1996)
+replace surname = "Rychtář" if surname == "Rychtar" & birthdate == td(14aug1990)
+replace surname = "Saleh Salem" if surname == "Salem" & birthdate == td(17mar1987)
+replace surname = "Strachotová" if surname == "Strachotova" & birthdate == td(17nov1991)
+replace surname = "Svatuška" if surname == "Svatuska" & birthdate == td(12mar1986)
+replace surname = "Tenzerová" if surname == "Tenzerova" & birthdate == td(30nov1980)
+replace surname = "Ujfaluši" if surname == "Ujfalusi" & birthdate == td(17jul1979)
+replace surname = "Vonešová" if surname == "Vonesova" & birthdate == td(27jun1991)
+replace surname = "Bitomský" if surname == "Bitomký" & birthdate == td(06feb1981)
+replace surname = "Břečťál" if surname == "Břešťál" & birthdate == td(05nov1950)
+replace surname = "Burkhardová" if surname == "Burkhadová" & birthdate == td(13jul1953)
+replace surname = "Kokolusová" if surname == "Kokolousová" & birthdate == td(29may1967)
+replace surname = "Bukovanská" if surname == "Bukanovská" & birthdate == td(11sep1964)
+replace surname = "Hanus" if surname == "Hanuš" & birthdate == td(22jul1971)
+replace surname = "Hřebačková" if surname == "Hřebáčková" & birthdate == td(08mar1973)
+replace surname = "Knauer Belcredi" if surname == "Knauer" & birthdate == td(19nov1982)
+replace surname = "Vostradovský" if surname == "Vostadovský" & birthdate == td(22nov1970)
+replace surname = "Švancara" if surname == "Švanacara" & birthdate == td(21sep1976)
+replace surname = "Kmiećová" if surname == "Kmiecová" & birthdate == td(10jul1972)
+replace surname = "Licehemer" if surname == "Licehamr" & birthdate == td(30jul1965)
+
+replace birthdate = td(28feb1978) if birthdate == td(23feb1978) & surname == "Babáčková"
+replace birthdate = td(01may1948) if birthdate == td(01may1948) & surname == "Balcarová"
+replace birthdate = td(10dec1975) if birthdate == td(10dec1965) & surname == "Bačák"
+replace birthdate = td(11dec1966) if birthdate == td(11dec1965) & surname == "Denk"
+replace birthdate = td(13jun1975) if birthdate == td(19jun1975) & surname == "Dolanský"
+replace birthdate = td(20mar1961) if birthdate == td(23mar1961) & surname == "Drbohlav"
+replace birthdate = td(12jun1969) if birthdate == td(12jul1969) & surname == "Dvořák"
+replace birthdate = td(28aug1956) if birthdate == td(26aug1956) & surname == "Bradáč"
+replace birthdate = td(14nov1972) if birthdate == td(14nov1971) & surname == "Kladivová"
+replace birthdate = td(05apr1967) if birthdate == td(05sep1967) & surname == "Felner"
+replace birthdate = td(16mar1937) if birthdate == td(16jul1937) & surname == "Filák"
+replace birthdate = td(02dec1961) if birthdate == td(02dec1962) & surname == "Flesar"
+replace birthdate = td(10aug1968) if birthdate == td(10aug1967) & surname == "Fojt"
+replace birthdate = td(17may1956) if birthdate == td(17may1955) & surname == "Forišková"
+replace birthdate = td(26jul1969) if birthdate == td(26jul1967) & surname == "František"
+replace birthdate = td(17dec1967) if birthdate == td(17nov1967) & surname == "Gogelová"
+replace birthdate = td(11jun1984) if birthdate == td(01apr1984) & surname == "Grolich"
+replace birthdate = td(29jul1988) if birthdate == td(29aug1988) & surname == "Hainc"
+replace birthdate = td(01aug1960) if birthdate == td(04aug1960) & surname == "Kodrík"
+replace birthdate = td(17may1956) if birthdate == td(13may1956) & surname == "Kollová"
+replace birthdate = td(02dec1966) if birthdate == td(02dec1976) & surname == "Kozubík"
+replace birthdate = td(12apr1966) if birthdate == td(14apr1966) & surname == "Krajíček"
+replace birthdate = td(12jun1984) if birthdate == td(12jun1974) & surname == "Král"
+replace birthdate = td(21mar1957) if birthdate == td(23mar1957) & surname == "Kuběna"
+replace birthdate = td(05jun1972) if birthdate == td(05jun1974) & surname == "Kvitová"
+replace birthdate = td(02jul1969) if birthdate == td(01jul1969) & surname == "Mikošková"
+replace birthdate = td(21sep1982) if birthdate == td(21oct1982) & surname == "Netolický"
+replace birthdate = td(21nov1978) if birthdate == td(21nov1976) & surname == "Novotný"
+replace birthdate = td(02feb1959) if birthdate == td(01feb1956) & surname == "Pagáčova"
+replace birthdate = td(02nov1951) if birthdate == td(02nov1950) & surname == "Poláčková"
+replace birthdate = td(01mar1982) if birthdate == td(01mar1981) & surname == "Herot"
+replace birthdate = td(14may1951) if birthdate == td(04may1951) & surname == "Hlisnikovský"
+replace birthdate = td(18jun1984) if birthdate == td(18jun1983) & surname == "Horut"
+replace birthdate = td(24jul1984) if birthdate == td(24jun1984) & surname == "Horák"
+replace birthdate = td(17mar1977) if birthdate == td(04mar1977) & surname == "Hromek"
+replace birthdate = td(09aug1968) if birthdate == td(09aug1966) & surname == "Hrubý"
+replace birthdate = td(14may1960) if birthdate == td(15may1960) & surname == "Jastrzembská"
+replace birthdate = td(27dec1989) if birthdate == td(27dec1985) & surname == "Jůnová"
+replace birthdate = td(07oct1970) if birthdate == td(07jan1970) & surname == "Stejskal"
+replace birthdate = td(17aug1952) if birthdate == td(27aug1952) & surname == "Trávníček"
+replace birthdate = td(29dec1972) if birthdate == td(29dec1973) & surname == "Tučková"
+replace birthdate = td(05feb1958) if birthdate == td(10feb1958) & surname == "Tvarůžek"
+replace birthdate = td(21aug1972) if birthdate == td(12aug1972) & surname == "Tylš"
+replace birthdate = td(05nov1949) if birthdate == td(05dec1949) & surname == "Urbánek"
+replace birthdate = td(21aug1998) if birthdate == td(21aug1988) & surname == "Vodáková"
+replace birthdate = td(23jun1971) if birthdate == td(23may1971) & surname == "Váša"
+replace birthdate = td(21mar1963) if birthdate == td(21mar1964) & surname == "Změlíková" 
+replace birthdate = td(28nov1986) if birthdate == td(28nov1968) & surname == "Černín"
+replace birthdate = td(21feb1958) if birthdate == td(21jan1958) & surname == "Šlahúnková"
+replace birthdate = td(05jul1961) if birthdate == td(05jul1964) & surname == "Chval"
+replace birthdate = td(10may1964) if birthdate == td(19may1964) & surname == "Říha"
+replace birthdate = td(10aug1980) if birthdate == td(01aug1980) & surname == "Šmídek"
+replace birthdate = td(17nov1961) if birthdate == td(19nov1961) & surname == "Štefek"
+replace birthdate = td(26mar1957) if birthdate == td(26may1957) & surname == "Štěpánek"
+replace birthdate = td(29jun1952) if birthdate == td(26jun1952) & surname == "Švecová"
+replace birthdate = td(01jun1950) if birthdate == td(06jan1950) & surname == "Halíková"
+replace birthdate = td(30sep1978) if birthdate == td(30jun1978) & surname == "Janda"
+replace birthdate = td(11feb1954) if birthdate == td(11mar1954) & surname == "Jirousová"
+replace birthdate = td(09jan1981) if birthdate == td(01sep1981) & surname == "Kotala"
+replace birthdate = td(02jul1955) if birthdate == td(07feb1955) & surname == "Kováčik"
+replace birthdate = td(11mar1967) if birthdate == td(03nov1967) & surname == "Mackovík"
+replace birthdate = td(19nov1953) if birthdate == td(09nov1953) & surname == "Mandát"
+replace birthdate = td(18sep1947) if birthdate == td(18oct1947) & surname == "Muchová"
+replace birthdate = td(08feb1947) if birthdate == td(02aug1947) & surname == "Pospíšil"
+replace birthdate = td(01nov1964) if birthdate == td(01jan1964) & surname == "Sekeráková"
+replace birthdate = td(06dec1964) if birthdate == td(16dec1964) & surname == "Vrzal"
+replace birthdate = td(19aug1960) if birthdate == td(10aug1960) & surname == "Hlaváček"
+replace birthdate = td(10apr1981) if birthdate == td(19apr1981) & surname == "Kinčl"
+replace birthdate = td(26sep1989) if birthdate == td(29sep1989) & surname == "Pleskač"
+replace birthdate = td(11jul1965) if birthdate == td(11jul1975) & surname == "Ruso"
+replace birthdate = td(01sep1966) if birthdate == td(07sep1966) & surname == "Sovová"
+replace birthdate = td(22oct1977) if birthdate == td(22oct1997) & surname == "Adamec" 
+replace birthdate = td(08jul1979) if birthdate == td(07aug1979) & surname == "Binka"
+replace birthdate = td(08jul1977) if birthdate == td(05jan1977) & surname == "Brůžek"
+replace birthdate = td(16may1977) if birthdate == td(16may1997) & surname == "Bíbr"
+replace birthdate = td(22apr1978) if birthdate == td(22apr2020) & surname == "Bohuňková"
+replace birthdate = td(04jul1983) if birthdate == td(04jul1989) & surname == "Chaloupka"
+replace birthdate = td(29jan1989) if birthdate == td(28jan1989) & surname == "Florián"
+replace birthdate = td(03jul1976) if birthdate == td(07mar1976) & surname == "Galata"
+replace birthdate = td(28jul1959) if birthdate == td(28jul1958) & surname == "Holubová"
+replace birthdate = td(26jun1990) if birthdate == td(25jun1990) & surname == "Housa"
+replace birthdate = td(30sep1983) if birthdate == td(01jan1900) & surname == "Hájek"
+replace birthdate = td(22jan1954) if birthdate == td(01mar2023) & surname == "Janata"
+replace birthdate = td(13apr1989) if birthdate == td(13apr1989) & surname == "Janek"
+replace birthdate = td(05sep1988) if birthdate == td(08oct1988) & surname == "Janovský"
+replace birthdate = td(09apr1987) if birthdate == td(04sep1987) & surname == "Jelínek"
+replace birthdate = td(15dec1989) if birthdate == td(15dec1995) & surname == "Jokeš"
+replace birthdate = td(08may1991) if birthdate == td(08may1988) & surname == "Karasaridis"
+replace birthdate = td(24nov1994) if birthdate == td(24dec1994) & surname == "Kindl"
+replace birthdate = td(14feb1972) if birthdate == td(14feb1989) & surname == "Kluka"
+replace birthdate = td(26aug1968) if birthdate == td(26may1968) & surname == "Koumarová"
+replace birthdate = td(31mar1960) if birthdate == td(24mar1960) & surname == "Kožich"
+replace birthdate = td(04aug1989) if birthdate == td(04aug1988) & surname == "Lochmanová"
+replace birthdate = td(06mar1964) if birthdate == td(12mar1964) & surname == "Mendl"
+replace birthdate = td(07jun1955) if birthdate == td(06jul1955) & surname == "Mrázek"
+replace birthdate = td(19jun1972) if birthdate == td(20jun1962) & surname == "Naiclerová" 
+replace birthdate = td(01jan1984) if birthdate == td(12jul1984) & surname == "Nešpor"
+replace birthdate = td(09jun1994) if birthdate == td(06sep1994) & surname == "Noha"
+replace birthdate = td(28may1986) if birthdate == td(23may1986) & surname == "Novotná"
+replace birthdate = td(10may1972) if birthdate == td(05oct1972) & surname == "Novák" 
+replace birthdate = td(16jun1971) if birthdate == td(15jun1971) & surname == "Otto"
+replace birthdate = td(18may1984) if birthdate == td(17apr1984) & surname == "Pařízek"
+replace birthdate = td(29jun1983) if birthdate == td(26jun1983) & surname == "Paška"
+replace birthdate = td(28feb1952) if birthdate == td(29feb1952) & surname == "Petr"
+replace birthdate = td(03feb1987) if birthdate == td(03mar1987) & surname == "Pešán"
+replace birthdate = td(28oct1991) if birthdate == td(28oct1995) & surname == "Podroužek"
+replace birthdate = td(17aug1969) if birthdate == td(17aug1984) & surname == "Pravda"
+replace birthdate = td(09mar1970) if birthdate == td(03sep1970) & surname == "Rendl"
+replace birthdate = td(21aug1982) if birthdate == td(21aug1989) & surname == "Rozsypal"
+replace birthdate = td(08may1977) if birthdate == td(08may1966) & surname == "Rusóová"
+replace birthdate = td(28may1983) if birthdate == td(28may2020) & surname == "Sadílek"
+replace birthdate = td(08apr1989) if birthdate == td(08sep1989) & surname == "Simkanič"
+replace birthdate = td(05sep1984) if birthdate == td(05sep1983) & surname == "Suchanek"
+replace birthdate = td(25oct1991) if birthdate == td(15oct1991) & surname == "Svrček"
+replace birthdate = td(29sep1978) if birthdate == td(29sep2022) & surname == "Sáňková"
+replace birthdate = td(18mar1983) if birthdate == td(18mar1971) & surname == "Síkora"
+replace birthdate = td(05jun1991) if birthdate == td(06may1991) & surname == "Sýkora"
+replace birthdate = td(09mar1972) if birthdate == td(03sep1972) & surname == "Tomis"
+replace birthdate = td(05aug1984) if birthdate == td(08may1984) & surname == "Toušek"
+replace birthdate = td(09jul1978) if birthdate == td(07sep1978) & surname == "Třešňáková"
+replace birthdate = td(28nov1985) if birthdate == td(28nov1995) & surname == "Urbánek"
+replace birthdate = td(19apr1998) if birthdate == td(19apr1994) & surname == "Vidláková" 
+replace birthdate = td(24may1987) if birthdate == td(25may1987) & surname == "Vrba" 
+replace birthdate = td(26jan1983) if birthdate == td(26jul1983) & surname == "Zach"
+replace birthdate = td(03jun1962) if birthdate == td(30jun1962) & surname == "Zemánek"
+replace birthdate = td(19sep1982) if birthdate == td(19sep1991) & surname == "Zámečník"
+replace birthdate = td(28feb1976) if birthdate == td(29feb1976) & surname == "Čermáková"
+replace birthdate = td(14feb1989) if birthdate == td(14feb1988) & surname == "Čáha"
+replace birthdate = td(14jan1962) if birthdate == td(04jan1962) & surname == "Šemík"
+replace birthdate = td(03nov1989) if birthdate == td(03nov1988) & surname == "Žák"
+replace birthdate = td(25jun1976) if birthdate == td(25jun1973) & surname == "Bakošová"
+replace birthdate = td(25dec1962) if birthdate == td(25jan1962) & surname == "Bojko"
+replace birthdate = td(19mar1995) if birthdate == td(29mar1995) & surname == "Impseil"
+replace birthdate = td(21jan1972) if birthdate == td(21jan1987) & surname == "Kachlík"
+replace birthdate = td(29aug1948) if birthdate == td(28aug1948) & surname == "Moudrý"
+replace birthdate = td(03sep1983) if birthdate == td(04sep1983) & surname == "Plevková"
+replace birthdate = td(01mar1956) if birthdate == td(02mar1956) & surname == "Severová"
+replace birthdate = td(12jan1957) if birthdate == td(01dec1957) & surname == "Wawrzacz"
+replace birthdate = td(11may1960) if birthdate == td(01may1960) & surname == "Čech"
+replace birthdate = td(25oct1961) if birthdate == td(15oct1961) & surname == "Čechová"
+replace birthdate = td(07oct1963) if birthdate == td(10jul1963) & surname == "Štefcová"
+replace birthdate = td(07apr1967) if birthdate == td(07apr1967) & surname == "Švancarová'"
+replace birthdate = td(23feb1979) if birthdate == td(03feb1979) & surname == "Bouška"
+replace birthdate = td(02oct1945) if birthdate == td(01oct1945) & surname == "Cetkovský"
+replace birthdate = td(16sep1966) if birthdate == td(18sep1966) & surname == "Davídek"
+replace birthdate = td(02may1976) if birthdate == td(20may1976) & surname == "Dohnal"
+replace birthdate = td(06feb1985) if birthdate == td(05feb1985) & surname == "Drbohlav"
+replace birthdate = td(12mar1988) if birthdate == td(13mar1988) & surname == "Flek"
+replace birthdate = td(06jul1969) if birthdate == td(07jun1969) & surname == "Hejma"
+replace birthdate = td(19mar1954) if birthdate == td(29mar1954) & surname == "Horník"
+replace birthdate = td(14sep1968) if birthdate == td(14sep2020) & surname == "Horák"
+replace birthdate = td(02feb1969) if birthdate == td(02feb1961) & surname == "Hrabě"
+replace birthdate = td(01oct1980) if birthdate == td(11jan1980) & surname == "Jirovský"
+replace birthdate = td(12may1977) if birthdate == td(12may2020) & surname == "Karásková"
+replace birthdate = td(25jan1971) if birthdate == td(25oct1971) & surname == "Kuklová"
+replace birthdate = td(17nov1962) if birthdate == td(07nov1962) & surname == "Marešová"
+replace birthdate = td(28jan1976) if birthdate == td(27jan1976) & surname == "Bílová"
+replace birthdate = td(28apr1966) if birthdate == td(29apr1966) & surname == "Müller"
+replace birthdate = td(02sep1972) if birthdate == td(02aug1972) & surname == "Quittová"
+replace birthdate = td(15nov1974) if birthdate == td(15nov1977) & surname == "Vávra"
+replace birthdate = td(22jan1979) if birthdate == td(20jan1979) & surname == "Čejka"
+replace birthdate = td(20oct1986) if birthdate == td(29oct1986) & surname == "Šperl"
+replace birthdate = td(21sep1976) if birthdate == td(19sep1976) & surname == "Švancara"
+replace birthdate = td(24aug1983) if birthdate == td(23aug1983) & surname == "Uzel"
+replace birthdate = td(30apr1965) if birthdate == td(30apr1954) & surname == "Chvojka"
+replace birthdate = td(22jul1973) if birthdate == td(21jul1977) & surname == "Janíček"
+replace birthdate = td(30may1955) if birthdate == td(30apr1955) & surname == "Nedvědický"
+replace birthdate = td(09mar1971) if birthdate == td(17mar1971) & surname == "Med"
+replace birthdate = td(28jul1971) if birthdate == td(20jul1971) & surname == "Pavelek"
+replace birthdate = td(05apr1954) if birthdate == td(03apr1954) & surname == "Procházková"
+replace birthdate = td(03apr1970) if birthdate == td(04mar1970) & surname == "Tregner"
+replace birthdate = td(22sep1982) if birthdate == td(22sep2020) & surname == "Netolický"
+replace birthdate = td(28aug1988) if birthdate == td(25aug1988) & surname == "Polanský"
+
+replace birthdate = td(21oct1948) if (birthdate == td(06oct1948) | birthdate == td(02oct1948)) & surname == "Všetečka"
+replace birthdate = td(04aug1986) if (birthdate == td(04aug1983) | birthdate == td(04jul1986)) & surname == "Havran"
+replace birthdate = td(29jul1973) if (birthdate == td(29jul1989) | birthdate == td(29jul1993)) & surname == "Pešková"
+
+
+
+*replace birthdate = td(29jul1991) if birthdate == td(01dec1989) & surname == "Keše"
+*replace birthdate = td(28jun1985) if birthdate == td(07jun1995) & surname == "Klusová"
+*replace birthdate = td(30nov1979) if birthdate == td(16apr1990) & surname == "Kocourek"
+*replace birthdate = td(09jan1987) if birthdate == td(18mar1989) & surname == "Kocourek"
+*replace birthdate = td(19dec1968) if birthdate == td(16apr1988) & surname == "Koky"
+*replace birthdate = td(11apr1989) if birthdate == td(04dec1983) & surname == "Kolafa"
+*replace birthdate = td(29jun1980) if birthdate == td(21may1987) & surname == "Kolaja"
+*replace birthdate = td(27jun1992) if birthdate == td(05feb1985) & surname == "Koláčný"
+*replace birthdate = td(05apr1983) if birthdate == td(03dec1991) & surname == "Kolář" & firstname == "Petr"
+*replace birthdate = td(17jan1997) if birthdate == td(13apr1977) & surname == "Konečný"
+*replace birthdate = td(11nov2000) if birthdate == td(09may1988) & surname == "Kopecký"
+*replace birthdate = td(04dec1952) if birthdate == td(05nov1985) & surname == "Kopeček"
+*replace birthdate = td(11nov1985) if birthdate == td(26oct1986) & surname == "Kopřiva"
+*replace birthdate = td(22jan1990) if birthdate == td(09apr1983) & surname == "Kočí"
+*replace birthdate = td(30oct1952) if birthdate == td(05apr1946) & surname == "Kratochvíl"
+*replace birthdate = td(19oct1973) if birthdate == td(10jan1979) & surname == "Krejčí"
+*replace birthdate = td(10oct1988) if birthdate == td(08may1992) & surname == "Kupka"
+*replace birthdate = td(16jun1984) if birthdate == td(06dec1984) & surname == "Kuzel"
+*replace birthdate = td(19sep1994) if birthdate == td(01aug1994) & surname == "Kučera"
+*replace birthdate = td(05jun1985) if birthdate == td(28nov1981) & surname == "Kučera"
+*replace birthdate = td(15jul1993) if birthdate == td(29jul1959) & surname == "Kučera"
+*replace birthdate = td(21may1977) if birthdate == td(21jun1977) & surname == "Kümmel"
+*replace birthdate = td(19mar1996) if birthdate == td(07dec1969) & surname == "Langr"
+*replace birthdate = td(02dec1946) if birthdate == td(13jun1988) & surname == "Losos"
+*replace birthdate = td(22may1979) if birthdate == td(29jul1978) & surname == "Mach"
+*replace birthdate = td(23apr1976) if birthdate == td(17jan1989) & surname == "Mareda"
+*replace birthdate = td(21mar1980) if birthdate == td(11nov1997) & surname == "Mareš"
+*replace birthdate = td(21jan1984) if birthdate == td(05oct1983) & surname == "Matoušek"
+*replace birthdate = td(25sep1980) if birthdate == td(15sep1993) & surname == "Matějka"
+*replace birthdate = td(14dec1968) if birthdate == td(24feb1945) & surname == "Michálek"
+*replace birthdate = td(20jan1952) if birthdate == td(27apr1988) & surname == "Moravec"
+*replace birthdate = td(02oct1980) if birthdate == td(02oct1980) & surname == "Moravec"
+*replace birthdate = td(25sep1979) if birthdate == td(27mar1982) & surname == "Musil"
+*replace birthdate = td(13sep1996) if birthdate == td(24jan1989) & surname == "Musílek"
+*replace birthdate = td(15sep1992) if birthdate == td(07jul194) & surname == "Navrkal"
+*replace birthdate = td(22may1977) if birthdate == td(16feb1996) & surname == "Navrátil"
+*replace birthdate = td(08nov1987) if birthdate == td(18oct1957) & surname == "Novotná"
+*replace birthdate = td(20sep1982) if birthdate == td(14jun1995) & surname == "Novotná"
+*replace birthdate = td(23may1948) if birthdate == td(05may1978) & surname == "Novotný"
+*replace birthdate = td(23may1948) if birthdate == td(25oct1984) & surname == "Novotný"
+*replace birthdate = td(16mar1983) if birthdate == td(19nov1994) & surname == "Novotný" 
+*replace birthdate = td(14aug1987) if birthdate == td(03dec1988) & surname == "Novák"
+*replace birthdate = td(19jan1991) if birthdate == td(01mar1997) & surname == "Novák"
+*replace birthdate = td(19may1984) if birthdate == td(05may1987) & surname == "Novák"
+*replace birthdate = td(11jun1990) if birthdate == td(27apr1983) & surname == "Novák"
+*replace birthdate = td(06jan1973) if birthdate == td(28oct1995) & surname == "Nováková"
+*replace birthdate = td(01aug1983) if birthdate == td(30nov1984) & surname == "Němec"
+*replace birthdate = td(06sep1961) if birthdate == td(07jan1989) & surname == "Ornstová"
+*replace birthdate = td(02may1978) if birthdate == td(08sep1974) & surname == "Pavlas"
+*replace birthdate = td(28mar1985) if birthdate == td(24feb1981) & surname == "Pavlík"
+*replace birthdate = td(22mar1988) if birthdate == td(12jun1993) & surname == "Pavlíček"
+*replace birthdate = td(29oct1952) if birthdate == td(17sep1987) & surname == "Pavlíček"
+*replace birthdate = td(18mar1985) if birthdate == td(06dec1983) & surname == "Průchová"
+*replace birthdate = td(30may1987) if birthdate == td(15oct1987) & surname == "Sedlák"
+*replace birthdate = td(01mar1968) if birthdate == td(05oct1993) & surname == "Sejkora"
+*replace birthdate = td(25oct1988) if birthdate == td(31mar1988) & surname == "Skalický"
+*replace birthdate = td(03nov1992) if birthdate == td(21nov1995) & surname == "Svoboda"
+*replace birthdate = td(17oct1989) if birthdate == td(17feb1990) & surname == "Svoboda"
+*replace birthdate = td(17jun1987) if birthdate == td(08jan2000) & surname == "Sál"
+*replace birthdate = td(28mar1958) if birthdate == td(27mar1960) & surname == "Zemanová"
+*replace birthdate = td(28jul1964) if birthdate == td(20may1964) & surname == "Navrátil"
+*replace birthdate = td(03jul1973) if birthdate == td(03jul1957) & surname == "Volný" 
+
+*replace birthdate = td(28apr1966) if (birthdate == td(29jan1981) | birthdate == td(25apr1989)) & surname == "Müller"
+*replace birthdate = td(27oct1987) if (birthdate == td(20aug1978) | birthdate == td(02jul1997)) & surname == "Valenta" 
+*replace birthdate = td(17oct1993) if (birthdate == td(09apr1991) | birthdate == td(26jun1994)) & surname == "Procházka"
+*replace birthdate = td(22dec1968) if (birthdate == td(13jul1988) | birthdate == td(15mar1989)) & surname == "Nováková" 
+*replace birthdate = td(29jul1993) if (birthdate == td(15jun1964) | birthdate == td(12jan1980)) & surname == "Novák"
+*replace birthdate = td(28jul1980) if (birthdate == td(06dec1978) | birthdate == td(19feb1983)) & surname == "Novák"
+
+*replace birthdate = td(19aug1992) if (birthdate == td(18may1989) | birthdate == td(07dec1990) | birthdate == td(04nov1993) | birthdate == td(29apr1996)) & surname == "Novák" 
+
 
 replace firstname = "Tomáš" if firstname == "Tomas" | firstname == "Tomás" | firstname == "Tomaš"
 replace firstname = "Jiří" if firstname == "Jiri" | firstname == "Jiři" | firstname == "Jirí" | firstname == "jiri" | firstname == "JIří"
@@ -1060,24 +1371,8 @@ replace acadegree_bn = "prof. PhDr." if acadegree_bn == "Prof, PhDr." | acadegre
 replace acadegree_bn = "prof. Ing." if acadegree_bn == "prof. Ing."
 replace acadegree_bn = "prof. PharmDr." if acadegree_bn == "Prof.PharmDr." | acadegree_bn == "prof. PharmDr."
 
+collapse (sum) `d'_donation (first) acadegree_an acadegree_bn , by(polparty surname firstname birthdate year)
 
-egen id = group(polparty surname firstname birthdate)
-
-generate length_degree_bn = strlen(acadegree_bn)
-replace length_degree_bn = 0 if length_degree_bn == 1
-generate length_degree_an = strlen(acadegree_an)
-replace length_degree_an = 0 if length_degree_an == 1
-
-gen length = length_degree_an + length_degree_bn
-
-gsort id -length
-
-replace acadegree_bn = acadegree_bn[_n-1] if id[_n] == id[_n-1]
-replace acadegree_an = acadegree_an[_n-1] if id[_n] == id[_n-1]
-
-drop lengt* 
-
-gen i = 1
-
-save donation_data_clean.dta, replace 
-
+sort polparty surname firstname birthdate year
+save "donation_data_`d'_clean.dta", replace 
+}
