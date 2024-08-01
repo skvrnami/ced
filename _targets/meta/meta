@@ -11,7 +11,7 @@ ep_2009|stem|1c261e3dfb23996a|bf670c4e5bead4aa|f4ea4ccdeb7e8a26|1298019084||t199
 ep_2014|stem|e463aaaa3902d9bd|f8365166b6085ac4|f4ea4ccdeb7e8a26|-1587599466||t19914.739910859s|0036b53354a2320f|35913|rds|local|vector|||12.467||
 ep_2019|stem|5ec85142bd064641|7feffdadc48e8d0c|3745e23988b89a5e|-1407808319||t19914.7399116303s|8828a16f3a4b023e|39511|rds|local|vector|||0.052||
 ep_2024|stem|eabc95c96a1b29bf|f9b4c33040e546ed|3745e23988b89a5e|179190747||t19914.7400327469s|2a03995a6eac301c|34108|rds|local|vector|||0.049||
-ep_data|object|5922d33dd00eae5e|||||||||||||||
+ep_data|object|dbfbe1dda7629746|||||||||||||||
 ep_panel|stem|1d090bcd822eb056|1bf4d798c7bc8158|7974e5a85c57e087|441611407||t19916.8077886274s|caddb04471c1ce0e|171546|rds|local|vector|||0.286||
 ep_panel_check|stem|95c869582cc88ef6|a43b30ba8ddd4072|df314c7774604d06|1445266258||t19916.807788684s|e255484007059372|43|rds|local|vector|||0||
 extract_el_value|function|84a37571a65b91e5|||||||||||||||
@@ -28,13 +28,15 @@ m_2010|stem|13452a171ab54131|1663a89afc21e3f9|91afb071dc2c5ac3|1962223721||t1992
 m_2014|stem|5e0237c6808af7e9|dd93fd446f287c0a|d00b419a18b30ba7|537450670||t19928.631630282s|9ae849c2ec852b9a|5766380|rds|local|vector|||0.134||
 m_2018|stem|b421abb9aa058b79|8b606d60f2f3b0c3|4f817af1bcdfb7bf|-658952016||t19928.6316826102s|25e63f570291d63c|5448246|rds|local|vector|||0.025||
 m_2022|stem|10682631728e43ab|6e8544e271d0e134|ed7832230d64bd83|1933998235||t19928.8243465303s|1c58a66c9214cebb|5024572|rds|local|vector|||0.033||
-m_panel|stem|3fa1e417400cae40|e8a1d654d25bc87a|68b2f336f0bc9507|-729445430||t19929.6854721382s|05f425df20703ab8|42129298|rds|local|vector|||17.768||
-m_panel_check|stem|95c869582cc88ef6|68f6a18d5ad7b3f8|c117d76cc2500c96|91673129||t19929.6863926361s|e255484007059372|43|rds|local|vector|||0||
+m_panel|stem|a6c2bd98f15f5f42|e8a1d654d25bc87a|036c11b5863fa2be|-729445430||t19934.9438907228s|b2c654dfdbb99c50|42128526|rds|local|vector|||22.482||
+m_panel_check|stem|95c869582cc88ef6|68f6a18d5ad7b3f8|cf968693cc07333b|91673129||t19934.9439351519s|e255484007059372|43|rds|local|vector|||0||
 match_data|function|80fd0e20af874a7c|||||||||||||||
-match_mun_data|function|e86b3bf752b2e93d|||||||||||||||
+match_mun_data|function|4475a26b7f67bf39|||||||||||||||
+match_mun_panel_data|function|04dec8b27ef68208|||||||||||||||
 match_psp_data|function|f2ba10a845799f13|||||||||||||||
 match_reg_data|function|e9149af5388bea0c|||||||||||||||
 match_sen_data|function|5993a3d7e3ba6a19|||||||||||||||
+matched_panels|object|6e72ec1bc78b70a1|||||||||||||||
 mc_1994|stem|4671a3a1728c4635|d0187297b17ed16f|06f3e025c05e678b|-1582323729||t19928.8290452829s|ebd444951f837cce|283166|rds|local|vector|||0.008||
 mc_1998|stem|d5fb2461963716bd|5600169ee8a99bd8|94e6ec39bf35d6ca|1413514479||t19928.6317232571s|3bbd4e215eac9583|369434|rds|local|vector|||0.029||
 mc_2002|stem|94c0052d46db1905|fe88d2b79d38be61|946d6bb0250dcf46|-1885604152||t19928.6316572805s|8b7b16afb299e0e7|382319|rds|local|vector|||0.009||
@@ -43,8 +45,10 @@ mc_2010|stem|0df19308af131afd|723bf2aebae9e702|8720ceb92bc57c5b|-1089250592||t19
 mc_2014|stem|e7b746364dd6abc8|74f4426671afeac8|eba896bde7bd8cc4|731900513||t19928.6316343988s|15d8491fab8cad8b|634174|rds|local|vector|||0.024||
 mc_2018|stem|e9b9a4cf4654d887|3fb9cb278d724c1f|3dc394c63073d820|-1957843351||t19928.6316848201s|777b3d5728425a1c|597476|rds|local|vector|||0.01||
 mc_2022|stem|c20b9688b64c40d7|e07cec7e93af81a8|1ae4a28ccae26637|-824958702||t19928.8243484231s|4774e74484a6c90a|519588|rds|local|vector|||0.009||
-mc_panel|stem|fbc0e82fed867bdd|9bf385a187f89341|2c0df59408ec636c|191527364||t19929.6855142045s|8f2a0774100c768e|4148011|rds|local|vector|||1.944||
-mc_panel_check|stem|95c869582cc88ef6|8d5a09f99f13e9c2|73c3829f6a124432|-814715848||t19929.6864053178s|e255484007059372|43|rds|local|vector|||0||
+mc_mun_check|stem|95c869582cc88ef6|807020e569107a07|61b66a66cacee2f1|-872671738||t19935.3554517019s|e255484007059372|43|rds|local|vector|||0||
+mc_mun_panel|stem|5eff8d125af09804|82aeb99fa12fc0ab|538c1561d3519552|-418327522||t19935.355450977s|31e991664354b35f|48263963|rds|local|vector|||34.729||
+mc_panel|stem|aa969ab02051d66e|9bf385a187f89341|75d501b8a9d15d24|191527364||t19934.9439349702s|74e81ba3d777739e|4149144|rds|local|vector|||2.098||
+mc_panel_check|stem|95c869582cc88ef6|8d5a09f99f13e9c2|c52e997cc7eec6ae|-814715848||t19934.9460479071s|e255484007059372|43|rds|local|vector|||0||
 merge_and_recode_titles|function|93369c3e2c2bdcaa|||||||||||||||
 mun_1994|stem|464ecf73aad771e5|bf4157d1d7eb633e|f0ef3a1a841ad25e|1612909392||t19928.8290310331s|e95d89d29f7463dd|2447656|rds|local|vector|||3.597|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
 mun_1998|stem|eb9f79f09da50d28|e27a5a44bc50a01f|b071577072d0065f|1140034410||t19880.3919845468s|cba1005a57c9c4ba|3434616|rds|local|vector|||2.413|There was 1 warning in mutate.ℹ In argument PRIJMENI  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.|
@@ -54,8 +58,8 @@ mun_2010|stem|2b0db11a23c52106|eb0ddb6f97b8e1a1|d02faba4fbb731fc|-78014300||t198
 mun_2014|stem|42dc8375d1dfcb7c|3413c98fc0cbba5e|d02faba4fbb731fc|962886030||t19880.391943358s|92f7e1c220ba0fa1|5832580|rds|local|vector|||6.14|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
 mun_2018|stem|51640efc95dded7f|466e2408caa5a13d|5f399c7a4c1da54f|-224577114||t19880.3920512956s|236d2bc23de09556|5519446|rds|local|vector|||4.174|There were 2 warnings in mutate.The first warning wasℹ In argument JMENO  ifelse....Caused by warning in stri_trans_totitle A resource bundle lookup returned a result either from the root or the default locale.ℹ Run dplyrlast_dplyr_warnings to see the 1 remaining warning.|
 mun_2022|stem|e2583a2b345c89b4|be703dba1bccd84c|b35b967d2718d68d|-761897437||t19928.8243286933s|58c8909925a9e895|5073588|rds|local|vector|||4.245||
-mun_data|object|950f1a91638dc185|||||||||||||||
-n_candidates|stem|54c63cd6b1139388|b991eaf16b6f5a0f|ef028f28510851f6|-1218510325||t19929.6864016774s|ecbea632a09ee47a|425|rds|local|vector|||0.034||
+mun_data|object|1cb80d2bf93ce31c|||||||||||||||
+n_candidates|stem|54c63cd6b1139388|b991eaf16b6f5a0f|63aa2a8eed048105|-1218510325||t19934.9460523619s|ecbea632a09ee47a|425|rds|local|vector|||0.034||
 n_candidates_tex|stem|95c869582cc88ef6|8a4b6e421beab43b|ef082236fa8dfae2|-1943745891||t19929.3668681172s|e255484007059372|43|rds|local|vector|||0.004||
 n_candidates_xlsx|stem|2b1ddf8bc0950b51|b8f21bb3b77a0f83|ef082236fa8dfae2|61274598||t19929.3669866239s|4be831169559909a|74|rds|local|vector|||0.006||
 parse_cns_row|function|ea8fb188f4f67eb2|||||||||||||||
@@ -72,7 +76,7 @@ psp_2010|stem|ff4f7a023c89dfc4|c3a11fe092724eb1|4faa025a0b9af13c|773072139||t198
 psp_2013|stem|42edb270b219b492|d1ff53bae6c4098d|4faa025a0b9af13c|-1204709187||t19880.3895568274s|8844be6f6f819eac|194419|rds|local|vector|||0.116||
 psp_2017|stem|6b2568b8401215a4|9314adf2ff7a2749|3745e23988b89a5e|-364826048||t19880.3895608398s|6045928fb4c80fa6|249754|rds|local|vector|||0.141||
 psp_2021|stem|c2b09cf61922501f|d309eb977f440f3f|3745e23988b89a5e|617370546||t19880.3895495606s|7313ff672e9b71ad|189983|rds|local|vector|||0.28||
-psp_data|object|3a51e02c6479ca6d|||||||||||||||
+psp_data|object|93a9459cf9b4d729|||||||||||||||
 psp_panel|stem|fc6a71d56998f79c|33daa26326d8aa40|00d5eb8f95d197fb|165177069||t19928.704310093s|20c74805fcb61656|1529731|rds|local|vector|||1.066||
 psp_panel_check|stem|95c869582cc88ef6|626b747a21142778|71e918ec5f9a9b7c|2035097691||t19928.7043104048s|e255484007059372|43|rds|local|vector|||0||
 read_candidates|function|a894256d2c79cd1f|||||||||||||||
@@ -91,7 +95,7 @@ reg_2008|stem|596084760e438ae0|8a7fcaedb1705f59|4faa025a0b9af13c|-1053447684||t1
 reg_2012|stem|b9eb9fbaee786e8f|b4980720db8c75c8|4faa025a0b9af13c|-614057398||t19880.3905336855s|25f1c7ffa4f74c65|338484|rds|local|vector|||0.206||
 reg_2016|stem|735207d06765db6f|76860626e74263d8|3745e23988b89a5e|-1786698957||t19880.3905370536s|35b5b985bfbc7dc5|362781|rds|local|vector|||0.197||
 reg_2020|stem|f216cf017c8d7ab7|cc19d7ee661c8f31|3745e23988b89a5e|1747894498||t19880.3905256297s|61aa94ec301444f3|318097|rds|local|vector|||0.178||
-reg_data|object|c8d3c7d8ec435513|||||||||||||||
+reg_data|object|a26830742e12ffb8|||||||||||||||
 reg_panel|stem|31f7aff3c2932763|4e3dbfdea50ee3d0|e54d970419862bcc|781182139||t19919.807570834s|1a5fa75ebdfe28c6|1945017|rds|local|vector|||0.908||
 reg_panel_check|stem|95c869582cc88ef6|2c6b13e7c7378f24|0c34cec33a972322|-1213009565||t19919.8075709368s|e255484007059372|43|rds|local|vector|||0||
 regular_elections|stem|947630671b4f5074|3ee230f445ef8933|2c530c1562a7fbd1|-3338427||t19929.3818644498s|06076334cca59fe3|113|rds|local|vector|||0.004||
@@ -114,8 +118,9 @@ sen_2020|stem|a007d16235a8e1e6|e9885615cc6c6c37|62720eed472af4a7|1434146435||t19
 sen_2022|stem|cb9d35069221d679|89865926fb42b99b|62720eed472af4a7|1461902962||t19929.4015037532s|80bc803281325ca2|14904|rds|local|vector|||0.002||
 sen_panel|stem|256477ec47602c0a|73c56624f3866582|6d32650ba5128c42|209257374||t19929.6867941433s|e118e3a4ff1f414a|205643|rds|local|vector|||0.874|Input is a length1 logical that points to the same address as Rs global value. Therefore the attribute has not been set by reference, rather on a copy. You will need to assign the result back to a variable. See issue 1281.. Input is a length1 logical that points to the same address as Rs global value. Therefore the attribute has not been set by reference, rather on a copy. You will need to assign the result back to a variable. See issue 1281.. Input is a length1 logical that points to the same address as Rs global value. Therefore the attribute has not been set by reference, rather on a copy. You will need to assign the result back to a variable. See issue 1281.. Input is a length1 logical that points to the same address as Rs global value. Therefore the attribute has not been set by reference, rather on a copy. You will need to assign the result back to a variable. See issue 1281.. Input is a length1 logical that points to the same address as Rs global value. Therefore the attribute has not been set by reference, rather on a copy. You will need to assign the result back to a variable. See issue 1281.. Input is a length1 logical that points to the same address as Rs global value. Therefore the attribute has not been set by reference, rather on a copy. You will need to assign the result back to a variable. See issue 1281.|
 sen_panel_check|stem|95c869582cc88ef6|fb1003e90f8afad1|8145251a939148ef|634683688||t19929.6872435308s|e255484007059372|43|rds|local|vector|||0.001||
-senate_data|object|54906541472d5f38|||||||||||||||
+sen_panel_check_unique_date_per_person|stem|95c869582cc88ef6|36794aee17544505|e52c839528302eaa|-598976041||t19934.9460528324s|e255484007059372|43|rds|local|vector|||0.023||
+senate_data|object|6ed72152199dbbb4|||||||||||||||
 senate_df|stem|b34bae9560936a5f|3517ddc5e3aca5bb|89902bda2165daa6|82902325||t19929.3932488421s|53deff56a9009ef2|185749|rds|local|vector|||0.291||
-summary_stats|object|ebeb1b80bd6c8dbb|||||||||||||||
+summary_stats|object|c4bf3b9a9153f3cf|||||||||||||||
 VSTRANA_MAP_96|object|6ec6e259e857204f|||||||||||||||
 VSTRANA_MAP_98|object|c678b917ba33c2f2|||||||||||||||

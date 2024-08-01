@@ -434,7 +434,9 @@ match_mun_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KODZA
                                        "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
                          comparators = list(
                            ROK_NAROZENI = cmp_within_1(),
-                           POVOLANI = cmp_jaccard()
+                           POVOLANI = cmp_jaccard(), 
+                           TITULY = cmp_jaccard(), 
+                           BYDLISTEN = cmp_jaccard()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -447,12 +449,13 @@ match_mun_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KODZA
                                 ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
                                 BYDLISTEN = 0.5, POVOLANI = 0.5),
                          w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
-                                TITULY = -0.5, 
+                                TITULY = -0.25, 
                                 ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
-                                BYDLISTEN = -0.5, POVOLANI = 0), 
+                                BYDLISTEN = -0.25, POVOLANI = 0), 
                          wna = 0)
   
-  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
+                                         threshold = 6)
   
   link(selected_pairs_greedy, selection = "greedy")
 }
@@ -494,6 +497,44 @@ match_sen_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
   
   link(selected_pairs_greedy, selection = "greedy")
+}
+
+match_mun_panel_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KODZASTUP")){
+  d1 <- d1 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                       "TITULY", "ZKRATKAP8", 
+                                       "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         comparators = list(
+                           POVOLANI = cmp_jaccard(), 
+                           TITULY = cmp_jaccard(), 
+                           BYDLISTEN = cmp_jaccard()
+                           # TODO: stejný nebo větší titul
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                "TITULY", "ZKRATKAP8", 
+                                "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
+                                TITULY = 0.5, 
+                                ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
+                                BYDLISTEN = 0.5, POVOLANI = 0.5),
+                         w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
+                                TITULY = -0.25, 
+                                ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
+                                BYDLISTEN = -0.25, POVOLANI = 0), 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
+                                         threshold = 6)
+  
+  link(selected_pairs_greedy, selection = "greedy") %>% 
+    left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
 }
 
 insert_nonconsecutive <- function(pivot_table, noncons, source, target){
