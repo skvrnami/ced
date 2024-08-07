@@ -1,4 +1,3 @@
-
 foreach p of global polparty {
 	
 	capture mkdir pp_`p'
