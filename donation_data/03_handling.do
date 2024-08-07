@@ -21,8 +21,8 @@ tostring acadegree_an, replace
 tostring acadegree_bn, replace 
 
 gen `d'_donation = .
-replace `d'_donation = částkaKč if částkaKč !=. 
-replace `d'_donation = hodnotaBÚPKč if hodnotaBÚPKč !=. 
+capture: replace `d'_donation = částkaKč if částkaKč !=. 
+capture: replace `d'_donation = hodnotaBÚPKč if hodnotaBÚPKč !=. 
 
 keep surname firstname acadegree_an acadegree_bn birthdate year polparty `d'_donation
 
@@ -961,7 +961,10 @@ replace surname = "Švancara" if surname == "Švanacara" & birthdate == td(21sep
 replace surname = "Kmiećová" if surname == "Kmiecová" & birthdate == td(10jul1972)
 replace surname = "Licehemer" if surname == "Licehamr" & birthdate == td(30jul1965)
 
-replace birthdate = td(28feb1978) if birthdate == td(23feb1978) & surname == "Babáčková"
+
+
+**** birthdate change ****
+replace birthdate = td(28feb1978) if birthdate == td(23feb1978) & surname == "Babáčková" 
 replace birthdate = td(01may1948) if birthdate == td(01may1948) & surname == "Balcarová"
 replace birthdate = td(10dec1975) if birthdate == td(10dec1965) & surname == "Bačák"
 replace birthdate = td(11dec1966) if birthdate == td(11dec1965) & surname == "Denk"
