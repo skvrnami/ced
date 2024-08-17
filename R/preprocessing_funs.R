@@ -73,6 +73,44 @@ extract_titles_from_last_name <- function(x){
            TITUL_KATEGORIE = categorize_titles(TITULY))
 }
 
+extract_titles_from_first_name <- function(df){
+  df %>% 
+    mutate(
+      TITULY_PRED = case_when(
+        grepl("Ing\\.JUDr\\.", JMENO) ~ "Ing. JUDr.",
+        grepl("Doc\\.Dr\\.", JMENO) ~ "Doc. Dr.",
+        grepl("Doc\\.ing\\.", JMENO) ~ "Doc. Ing.",
+        grepl("Mudr\\.", JMENO) ~ "MUDr.",
+        grepl("MVDr\\.", JMENO) ~ "MVDr.",
+        grepl("MUDr\\." , JMENO) ~ "MUDr.",
+        grepl("Mgr\\."  , JMENO) ~ "Mgr.",
+        grepl("RNDr\\." , JMENO) ~ "RNDr.",
+        grepl("ThMgr\\."  , JMENO) ~ "ThMgr.",
+        grepl("PharmDr\\.", JMENO) ~ "PharmDr.",
+        grepl("JUDr\\." , JMENO) ~ "JUDr.",
+        grepl("PhDr\\." , JMENO) ~ "PhDr.",
+        grepl("Paed\\sDr\\."  , JMENO) ~ "PaedDr.",
+        grepl("ing\\.", JMENO) ~ "Ing.",
+        grepl("Dr\\." , JMENO) ~ "Dr.",
+        grepl("PaedDr\\.", JMENO) ~ "PaedDr.",
+        grepl("Ing\\.", JMENO) ~ "Ing."
+      ), 
+      JMENO = gsub(
+        "^(Ing\\.JUDr\\.|Doc\\.Dr\\.|Doc\\.ing\\.|Mudr\\.|MVDr\\.|MUDr\\.|Mgr\\.|RNDr\\.|ThMgr\\.|PharmDr\\.|JUDr\\.|PhDr\\.|Paed\\sDr\\.|ing\\.|Dr\\.|PaedDr\\.|Ing\\.)", 
+        "", JMENO
+      ) %>% stringr::str_trim(., "both")
+    ) %>% 
+    mutate(
+      TITULY = case_when(
+        is.na(TITULY) & !is.na(TITULY_PRED) ~ TITULY_PRED,
+        !is.na(TITULY) & is.na(TITULY_PRED) ~ TITULY,
+        !is.na(TITULY) & !is.na(TITULY_PRED) ~ paste0(TITULY_PRED, ", ", TITULY)
+      ), 
+      TITUL_KATEGORIE = categorize_titles(TITULY)
+    ) %>% 
+    select(-TITULY_PRED)
+}
+
 extract_titles_from_last_name_1998 <- function(x){
   REPLACEMENT_VECTOR <- c(
     "\\bDoc\\sIng\\b"="Doc. Ing.",
@@ -108,6 +146,7 @@ extract_titles_from_last_name_1998 <- function(x){
     "\\(ml\\.\\)"="ml.",
     "\\bml\\b"="ml.",
     "\\bst\\b"="st.",
+    "\\bCSc\\b"="CSc.",
     "\\bdpt\\b"="",
     "\\bdipl.tech."=""
   )
@@ -136,6 +175,15 @@ merge_and_recode_titles <- function(df){
                               !is.na(TITULZA) ~ TITULZA,
                               TRUE ~ NA_character_), 
            TITUL_KATEGORIE = categorize_titles(TITULY))
+}
+
+remove_order_from_last_name <- function(df){
+  df %>% 
+    mutate(PRIJMENI = gsub(
+      "[,]*\\s(starší|st\\.|ml\\.|mladší|jr\\.|sen\\.|jun\\.|I\\.|II\\.|ST\\.|ML\\.|Ml\\.)$", "", PRIJMENI) %>% 
+        gsub(",(ml\\.|st\\.)", "", .) %>% 
+        gsub(",[ ]*roč\\.[0-9]+", "", .) %>% 
+        gsub("\\s\\((ml|mladší|st|starší)\\)", "", .))
 }
 
 categorize_sex <- function(df){
@@ -377,21 +425,21 @@ cmp_within_1 <- function(){
   }
 }
 
-cmp_tmp <- function(x, y){
-  if(grepl("\\s|-", x) || grepl("\\s|-", y)){
-    x_split <- unlist(strsplit(x, "\\s|-"))
-    y_split <- unlist(strsplit(y, "\\s|-"))
-    any(x_split) %in% y_split
-  }else{
-    x == y
-  }
-}
+# cmp_tmp <- function(x, y){
+#   if(grepl("\\s|-", x) || grepl("\\s|-", y)){
+#     x_split <- unlist(strsplit(x, "\\s|-"))
+#     y_split <- unlist(strsplit(y, "\\s|-"))
+#     any(x_split) %in% y_split
+#   }else{
+#     x == y
+#   }
+# }
 
 cmp_last_names <- function(){
   function(x, y){
     if(grepl("\\s|-", x) || grepl("\\s|-", y)){
-      x_split <- unlist(strsplit(x, "\\s|-"))
-      y_split <- unlist(strsplit(y, "\\s|-"))
+      x_split <- unlist(strsplit(gsub("\\(|\\)", "", x), "\\s|-"))
+      y_split <- unlist(strsplit(gsub("\\(|\\)", "", y), "\\s|-"))
       any(x_split %in% y_split)
     }else{
       x == y
@@ -713,6 +761,43 @@ match_mr_psp_panel <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
     left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
 }
 
+match_psp_sen_panel <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
+  d1 <- d1 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                       "TITULY", "ZKRATKAP8", 
+                                       "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         comparators = list(
+                           POVOLANI = cmp_jaccard(), 
+                           TITULY = cmp_jaccard(), 
+                           BYDLISTEN = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                "TITULY", "ZKRATKAP8", 
+                                "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
+                                TITULY = 0.5, 
+                                ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
+                                BYDLISTEN = 0.5, POVOLANI = 0.5),
+                         w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
+                                TITULY = -0.25, 
+                                ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
+                                BYDLISTEN = -0.25, POVOLANI = 0), 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
+                                         threshold = 6.25)
+  
+  link(selected_pairs_greedy, selection = "greedy") %>% 
+    left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+}
 
 insert_nonconsecutive <- function(pivot_table, noncons, source, target){
   noncons <- as.data.frame(noncons) 
