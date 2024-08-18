@@ -13,6 +13,12 @@ tar_source()
 # TODO: DiS. - https://cs.wikipedia.org/wiki/Diplomovan%C3%BD_specialista
 # TODO: matchování žen => potřeba rozdělit matchování na muže/ženy
 # TODO: dodatečné volby (would be nice in the future)
+# TODO: standardizovat MANDAT
+# M2006  M2010  M2014  M2018 MC2006 MC2010 MC2014  R2004  R2008  R2012 
+# 336    487    352     15     28     40     38   2019   1222   1970 
+
+# TODO: replace ´ in last name with ' (or ľ)
+# TODO: missing SEX (blbá jména)
 
 all_data <- list(
   tar_target(all_candidates, {
@@ -60,6 +66,35 @@ all_data <- list(
     multiple_last_names, {
       all_candidates %>% 
         filter(grepl("\\s|-", PRIJMENI))
+    }
+  ),
+  
+  # TODO: multiple last names for matching
+  # Exclude those starting wtih Al, El, Van, De, Del, Di
+  
+  # FIXME: co dělat se složenými jmény "Rosa de Pauli"/"Tozzi di Angelo"
+  tar_target(
+    multiple_last_names_eligible, {
+      multiple_last_names %>% 
+        filter(!grepl("^(Al|El|Van|Da|De|Del|Di|in|le|Abu|Abú)\\b", PRIJMENI, ignore.case = TRUE)) %>% 
+        pull(PRIJMENI) %>% 
+        strsplit(., "\\s|-") %>% 
+        unlist() %>% 
+        gsub("\\(|\\)", "", .) %>% 
+        stringr::str_trim() %>% 
+        unique()
+      
+      # mun_1994 %>% 
+      #   mutate(PRIJMENI_list = strsplit(PRIJMENI, "\\s|-")) %>% 
+      #   select(PRIJMENI, PRIJMENI_list, SEX) %>% 
+      #   mutate(PRIJMENI_len = purrr::map_int(PRIJMENI_list, length)) %>% 
+      #   # filter(PRIJMENI_len > 1) %>% 
+      #   mutate(filtered = purrr::map_lgl(PRIJMENI_list, function(x) {
+      #     any(x %in% unique_multiple_last_names)
+      #   })) %>% 
+      #   mutate(filtered_women = filtered & SEX == "female") %>% 
+      #   pull(filtered_women) %>% 
+      #   mean(., na.rm = TRUE)
     }
   )
 )
@@ -120,8 +155,11 @@ psp_data <- list(
           PRIJMENI == "PaličkaCSc" ~ "Palička",
           PRIJMENI == "Havel. CSc." ~ "Havel",
           TRUE ~ PRIJMENI
-        )
-      )
+        ), 
+        MANDAT = as.numeric(ZVOLEN1S != 0 | ZVOLEN2S != 0)
+      ) %>% 
+      select(-c(ZVOLEN1S, ZVOLEN2S)) %>% 
+      filter(PRIJMENI != "vytištěného HL")
   }),
   
   tar_target(psp_1998, command = {
@@ -144,9 +182,12 @@ psp_data <- list(
           PRIJMENI == "Kaňák CSc." ~ "Kaňák", 
           PRIJMENI == "Šindelářová CSc" ~ "Šindelářová",
           TRUE ~ PRIJMENI
-        )
+        ), 
+        MANDAT = as.numeric(ZVOLEN1S != 0 | ZVOLEN2S != 0)
       ) %>% 
-      merge_and_recode_titles
+      select(-c(ZVOLEN1S, ZVOLEN2S)) %>% 
+      merge_and_recode_titles %>% 
+      filter(PRIJMENI != "HLASOVACÍHO LÍSTKU")
   }),
   
   tar_target(psp_2002, command = {
@@ -620,7 +661,7 @@ reg_data <- list(
     cns <- cpp %>% rename(NSTRANA = PSTRANA, ZKRATKAN8 = ZKRATKAP8)
     list_path <- here("data", "KZ2004", "KZ04-Registr_kandidatu.xlsx")
     year <- as.numeric(stringr::str_extract(list_path, "[0-9]{4}"))
-    read_excel(list_path) %>%
+    read_excel(list_path) %>% 
       left_join(., cpp, by = "PSTRANA") %>%
       left_join(., cns, by = "NSTRANA") %>%
       mutate(row_id = row_number(), 
@@ -930,7 +971,8 @@ mun_data <- list(
                                PRIJMENI) %>% 
                gsub(",$", "", .)) %>% 
       categorize_sex %>% 
-      mutate(PRIJMENI = if_else(PRIJMENI == "Viktora starší", "Viktora", PRIJMENI))
+      mutate(PRIJMENI = if_else(PRIJMENI == "Viktora starší", "Viktora", PRIJMENI)) %>% 
+      filter(PRIJMENI != "vytištěného HL")
   }),
   
   tar_target(mun_2002, command = {
@@ -951,6 +993,7 @@ mun_data <- list(
           row_id == 95679 ~ "Jana",
           row_id == 98561 ~ "Bohumil",
           row_id == 157279 ~ "Hana",
+          JMENO == "Jitka Waschneko" ~ "Jitka",
           TRUE ~ JMENO
         ), 
         PRIJMENI = case_when(
@@ -961,8 +1004,8 @@ mun_data <- list(
           row_id == 95679 ~ "Jebavá",
           row_id == 98561 ~ "Černý",
           row_id == 157279 ~ "Lebedová",
+          PRIJMENI == "Vá Mühlbauerová" ~ "Waschneková Mühlbauerová",
           TRUE ~ PRIJMENI
-          
         ),
         TITULPRED = case_when(
           row_id == 156921 ~ "Mgr.",
@@ -2806,8 +2849,10 @@ senate_data <- list(
       
       full_join(sen_byel_pivot_long, sen_all_candidates, by = c("panel_id"="person_id", "panel")) %>% 
         arrange(person_id, year) %>% 
-        select(-c(panel, panel_id))
-      
+        select(-c(panel, panel_id)) %>% 
+        mutate(MANDAT = as.numeric(ZVOLEN_K1 == 1 | ZVOLEN_K2 == 1)) %>% 
+        select(-c(ZVOLEN_K1, ZVOLEN_K2, LOS_K1, LOS_K2, 
+                  URIZ_PR_K1, URIZ_PR_K2))
     }
   ),
   

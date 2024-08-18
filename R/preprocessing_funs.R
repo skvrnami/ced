@@ -180,7 +180,7 @@ merge_and_recode_titles <- function(df){
 remove_order_from_last_name <- function(df){
   df %>% 
     mutate(PRIJMENI = gsub(
-      "[,]*\\s(starší|st\\.|ml\\.|mladší|jr\\.|sen\\.|jun\\.|I\\.|II\\.|ST\\.|ML\\.|Ml\\.)$", "", PRIJMENI) %>% 
+      "[,]*\\s(starší|st\\.|ml\\.|mladší|jr\\.|sen\\.|jun\\.|I\\.|II\\.|ST\\.|ML\\.|Ml\\.|ml|II|I)$", "", PRIJMENI) %>% 
         gsub(",(ml\\.|st\\.)", "", .) %>% 
         gsub(",[ ]*roč\\.[0-9]+", "", .) %>% 
         gsub("\\s\\((ml|mladší|st|starší)\\)", "", .))
