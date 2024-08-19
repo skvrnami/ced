@@ -15,7 +15,8 @@ categorize_titles <- function(x){
   x <- dplyr::case_when(grepl("\\bprof\\b", x) ~ "Professor", # prof.
                         grepl("\\bdoc\\b", x) ~ "Associate Professor (docent)", # doc.
                         grepl("([a-z]+dr|ph\\.+d|phd|th\\.d|csc|drsc|dr)\\b", x) ~ "Doctor",
-                        grepl("\\b(ma|m[a-z]{2}|ing)\\b", x) ~ "Master", #Mgr, MgA, MA
+                        # https://cs.wikipedia.org/wiki/Promovan%C3%BD_pr%C3%A1vn%C3%ADk
+                        grepl("\\b(ma|m[a-z]{2}|ing|prom|ak|akad)\\b", x) ~ "Master", #Mgr, MgA, MA, promovaní, akad.arch atd.
                         grepl("\\b(bc|ba|bsc)\\b", x) ~ "Bachelor", #Bc, BcA, BA, BSc
                         TRUE ~ "No title")
   factor(x, levels = c("No title", "Bachelor", "Master",
@@ -72,6 +73,101 @@ extract_titles_from_last_name <- function(x){
            TITUL_KATEGORIE = categorize_titles(TITULY))
 }
 
+extract_titles_from_first_name <- function(df){
+  df %>% 
+    mutate(
+      TITULY_PRED = case_when(
+        grepl("Ing\\.JUDr\\.", JMENO) ~ "Ing. JUDr.",
+        grepl("Doc\\.Dr\\.", JMENO) ~ "Doc. Dr.",
+        grepl("Doc\\.ing\\.", JMENO) ~ "Doc. Ing.",
+        grepl("Mudr\\.", JMENO) ~ "MUDr.",
+        grepl("MVDr\\.", JMENO) ~ "MVDr.",
+        grepl("MUDr\\." , JMENO) ~ "MUDr.",
+        grepl("Mgr\\."  , JMENO) ~ "Mgr.",
+        grepl("RNDr\\." , JMENO) ~ "RNDr.",
+        grepl("ThMgr\\."  , JMENO) ~ "ThMgr.",
+        grepl("PharmDr\\.", JMENO) ~ "PharmDr.",
+        grepl("JUDr\\." , JMENO) ~ "JUDr.",
+        grepl("PhDr\\." , JMENO) ~ "PhDr.",
+        grepl("Paed\\sDr\\."  , JMENO) ~ "PaedDr.",
+        grepl("ing\\.", JMENO) ~ "Ing.",
+        grepl("Dr\\." , JMENO) ~ "Dr.",
+        grepl("PaedDr\\.", JMENO) ~ "PaedDr.",
+        grepl("Ing\\.", JMENO) ~ "Ing."
+      ), 
+      JMENO = gsub(
+        "^(Ing\\.JUDr\\.|Doc\\.Dr\\.|Doc\\.ing\\.|Mudr\\.|MVDr\\.|MUDr\\.|Mgr\\.|RNDr\\.|ThMgr\\.|PharmDr\\.|JUDr\\.|PhDr\\.|Paed\\sDr\\.|ing\\.|Dr\\.|PaedDr\\.|Ing\\.)", 
+        "", JMENO
+      ) %>% stringr::str_trim(., "both")
+    ) %>% 
+    mutate(
+      TITULY = case_when(
+        is.na(TITULY) & !is.na(TITULY_PRED) ~ TITULY_PRED,
+        !is.na(TITULY) & is.na(TITULY_PRED) ~ TITULY,
+        !is.na(TITULY) & !is.na(TITULY_PRED) ~ paste0(TITULY_PRED, ", ", TITULY)
+      ), 
+      TITUL_KATEGORIE = categorize_titles(TITULY)
+    ) %>% 
+    select(-TITULY_PRED)
+}
+
+extract_titles_from_last_name_1998 <- function(x){
+  REPLACEMENT_VECTOR <- c(
+    "\\bDoc\\sIng\\b"="Doc. Ing.",
+    "\\bDocent\\sCSc"="Doc. CSc.",
+    "\\bProf\\sIng\\sDrSc\\b"="Prof. Ing. DrSc.",
+    "\\bDocPhDrCSc\\b"="Doc. PhDr. CSc.",
+    "\\bDocMUDrDrSc\\b"="Doc. MUDr. DrSc.",
+    "\\bTh Lic P."="ThLic. P.",
+    "\\bIng\\b"="Ing\\.", 
+    "\\bing\\b"="Ing\\.",
+    "\\bMUDr\\b"="MUDr\\.",
+    "\\bMudr\\b"="MUDr.",
+    "\\bPharmDr\\b"="PharmDr.",
+    "\\bPhMr\\b"="PhMr.",
+    "\\bMgr\\b"="Mgr.",
+    "\\bMUC\\b"="MUC.",
+    "\\bPharm\\sDr."="PharmDr.",
+    "\\bJUDr\\b"="JUDr.",
+    "\\bPhDr\\b"="PhDr.",
+    "\\bMVDr\\b"="MVDr.",
+    "\\bDr\\b"="Dr.",
+    "\\bMGr\\b"="Mgr.",
+    "\\bRnDr\\b"="RNDr.",
+    "\\bRNDr\\b"="RNDr.",
+    "\\bPaedDr\\b"="PaedDr.",
+    "\\bPeadr\\b"="PaedDr.",
+    "\\bRSDr\\b"="RSDr.", 
+    "\\bRsDr\\b"="RSDr.",
+    "\\bPaeDr\\b"="PaeDr.",
+    "\\bBc\\b"="Bc.",
+    "\\bTh,Mgr\\b"="ThMgr",
+    "\\bRN Mgr\\b"="Mgr",
+    "\\(ml\\.\\)"="ml.",
+    "\\bml\\b"="ml.",
+    "\\bst\\b"="st.",
+    "\\bCSc\\b"="CSc.",
+    "\\bdpt\\b"="",
+    "\\bdipl.tech."=""
+  )
+  x %>%
+    mutate(PRIJMENI = stringr::str_replace_all(PRIJMENI, REPLACEMENT_VECTOR)) %>%
+    mutate(TITULY_NEW = 
+      paste(stringr::str_extract_all(PRIJMENI, "\\s[A-Za-z]+\\.[A-Ža-ž. ]*|,[^,]+"), 
+            sep = " "),
+      PRIJMENI = stringr::str_trim(
+        stringr::str_remove_all(PRIJMENI, "\\s[A-Za-z]+\\.[A-Ža-ž. ]*|,[^,]+"))) %>%
+    mutate(
+      TITULY_NEW = ifelse(TITULY_NEW == "character(0)", NA_character_, TITULY_NEW), 
+      TITULY = if_else(!is.na(TITULY_NEW), paste0(TITULY, TITULY_NEW, sep = " "), 
+                            TITULY)) %>% 
+    mutate(PRIJMENI = stringr::str_trim(gsub("\\.", "", PRIJMENI)), 
+           TITULY = stringr::str_trim(gsub("\\.\\.", "\\.", TITULY))) %>%
+    mutate(TITULY = ifelse(TITULY == "character(0)", NA_character_, TITULY), 
+           TITUL_KATEGORIE = categorize_titles(TITULY)) %>% 
+    select(-TITULY_NEW)
+}
+
 merge_and_recode_titles <- function(df){
   df %>%
     mutate(TITULY = case_when(!is.na(TITULPRED) & !is.na(TITULZA) ~ paste(TITULPRED, ", ", TITULZA), 
@@ -79,6 +175,22 @@ merge_and_recode_titles <- function(df){
                               !is.na(TITULZA) ~ TITULZA,
                               TRUE ~ NA_character_), 
            TITUL_KATEGORIE = categorize_titles(TITULY))
+}
+
+remove_order_from_last_name <- function(df){
+  df %>% 
+    mutate(PRIJMENI = gsub(
+      "[,]*\\s(starší|st\\.|ml\\.|mladší|jr\\.|sen\\.|jun\\.|I\\.|II\\.|ST\\.|ML\\.|Ml\\.)$", "", PRIJMENI) %>% 
+        gsub(",(ml\\.|st\\.)", "", .) %>% 
+        gsub(",[ ]*roč\\.[0-9]+", "", .) %>% 
+        gsub("\\s\\((ml|mladší|st|starší)\\)", "", .))
+}
+
+categorize_sex <- function(df){
+  df %>% 
+    mutate(FULL_NAME = paste0(JMENO, " ", PRIJMENI), 
+           SEX = get_sex(stringr::word(FULL_NAME))) %>% 
+    select(-FULL_NAME)
 }
 
 extract_el_value <- function(x, el){
@@ -297,19 +409,41 @@ read_candidates_xml <- function(list_path, parties_df, cpp_df, cns_df,
 
 filter_city_districts <- function(df, district_map){
   df %>% 
-    filter(KODZASTUP %in% district_map$CITY_DISTRICT) %>%
+    filter(TYPZASTUP == 2) %>% 
     left_join(., district_map, by = c("KODZASTUP"="CITY_DISTRICT"))
 }
 
 filter_municipalities <- function(df, district_map){
   df %>%
-    filter(!KODZASTUP %in% district_map$CITY_DISTRICT) %>%
+    filter(TYPZASTUP == 1) %>% 
     mutate(MUNICIPALITY = KODZASTUP)
 }
 
 cmp_within_1 <- function(){
   function(x, y){
     abs(x-y) <= 1
+  }
+}
+
+# cmp_tmp <- function(x, y){
+#   if(grepl("\\s|-", x) || grepl("\\s|-", y)){
+#     x_split <- unlist(strsplit(x, "\\s|-"))
+#     y_split <- unlist(strsplit(y, "\\s|-"))
+#     any(x_split) %in% y_split
+#   }else{
+#     x == y
+#   }
+# }
+
+cmp_last_names <- function(){
+  function(x, y){
+    if(grepl("\\s|-", x) || grepl("\\s|-", y)){
+      x_split <- unlist(strsplit(gsub("\\(|\\)", "", x), "\\s|-"))
+      y_split <- unlist(strsplit(gsub("\\(|\\)", "", y), "\\s|-"))
+      any(x_split %in% y_split)
+    }else{
+      x == y
+    }
   }
 }
 
@@ -326,6 +460,7 @@ match_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
                          comparators = list(
                            ROK_NAROZENI = cmp_within_1(),
                            POVOLANI = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -360,7 +495,8 @@ match_reg_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KRZAS
                                        "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
                          comparators = list(
                            ROK_NAROZENI = cmp_within_1(),
-                           POVOLANI = cmp_jaccard()
+                           POVOLANI = cmp_jaccard() 
+                           # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -393,10 +529,11 @@ match_psp_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
   pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
                                        "TITULPRED", "TITULZA", "ZKRATKAP8", 
                                        "ZKRATKAN8", "BYDLISTEN", "POVOLANI", 
-                                       "VOLKRAJ"), 
+                                       "KRAJ_NAZEV"), 
                          comparators = list(
                            ROK_NAROZENI = cmp_within_1(),
                            POVOLANI = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -404,17 +541,17 @@ match_psp_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
                          on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
                                 "TITULPRED", "TITULZA", "ZKRATKAP8", 
                                 "ZKRATKAN8", "BYDLISTEN", "POVOLANI", 
-                                "VOLKRAJ"), 
+                                "KRAJ_NAZEV"), 
                          w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
                                 TITULPRED = 0.5, TITULZA = 0.5, 
                                 ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
                                 BYDLISTEN = 0.5, POVOLANI = 0.5, 
-                                VOLKRAJ = 0.5),
+                                KRAJ_NAZEV = 0.5),
                          w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
                                 TITULPRED = -0.5, TITULZA = -0.5, 
                                 ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
                                 BYDLISTEN = -0.5, POVOLANI = 0, 
-                                VOLKRAJ = 0), 
+                                KRAJ_NAZEV = 0), 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
@@ -437,6 +574,7 @@ match_mun_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KODZA
                            POVOLANI = cmp_jaccard(), 
                            TITULY = cmp_jaccard(), 
                            BYDLISTEN = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -474,6 +612,7 @@ match_sen_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
                          comparators = list(
                            ROK_NAROZENI = cmp_within_1(),
                            POVOLANI = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -513,6 +652,7 @@ match_mun_panel_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", 
                            POVOLANI = cmp_jaccard(), 
                            TITULY = cmp_jaccard(), 
                            BYDLISTEN = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
@@ -532,6 +672,128 @@ match_mun_panel_data <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", 
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
                                          threshold = 6)
+  
+  link(selected_pairs_greedy, selection = "greedy") %>% 
+    left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+}
+
+match_mun_reg_panel <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI", "KRAJ_NAZEV")){
+  d1 <- d1 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                       "TITULY", "ZKRATKAP8", 
+                                       "ZKRATKAN8", "BYDLISTEN", "POVOLANI", 
+                                       "KRAJ_NAZEV"), 
+                         comparators = list(
+                           POVOLANI = cmp_jaccard(), 
+                           TITULY = cmp_jaccard(), 
+                           BYDLISTEN = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                "TITULY", "ZKRATKAP8", 
+                                "ZKRATKAN8", "BYDLISTEN", "POVOLANI", 
+                                "KRAJ_NAZEV"), 
+                         w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
+                                TITULY = 0.5, 
+                                ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
+                                BYDLISTEN = 0.5, POVOLANI = 0.5, 
+                                KRAJ_NAZEV = 1),
+                         w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
+                                TITULY = -0.25, 
+                                ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
+                                BYDLISTEN = -0.25, POVOLANI = 0, 
+                                KRAJ_NAZEV = -0.25), 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
+                                         threshold = 6)
+  
+  link(selected_pairs_greedy, selection = "greedy") %>% 
+    left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+}
+
+match_mr_psp_panel <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
+  d1 <- d1 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                       "TITULY", "ZKRATKAP8", 
+                                       "ZKRATKAN8", "BYDLISTEN", "POVOLANI", 
+                                       "KRAJ_NAZEV"), 
+                         comparators = list(
+                           POVOLANI = cmp_jaccard(), 
+                           TITULY = cmp_jaccard(), 
+                           BYDLISTEN = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                "TITULY", "ZKRATKAP8", 
+                                "ZKRATKAN8", "BYDLISTEN", "POVOLANI", 
+                                "KRAJ_NAZEV"), 
+                         w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
+                                TITULY = 0.5, 
+                                ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
+                                BYDLISTEN = 0.5, POVOLANI = 0.5, 
+                                KRAJ_NAZEV = 1),
+                         w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
+                                TITULY = -0.25, 
+                                ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
+                                BYDLISTEN = -0.25, POVOLANI = 0, 
+                                KRAJ_NAZEV = -0.25), 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
+                                         threshold = 6.25)
+  
+  link(selected_pairs_greedy, selection = "greedy") %>% 
+    left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+}
+
+match_psp_sen_panel <- function(d1, d2, blocking_vars = c("JMENO", "PRIJMENI")){
+  d1 <- d1 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(TITULY), ~if_else(is.na(.x), "", .x)))
+  
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                       "TITULY", "ZKRATKAP8", 
+                                       "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         comparators = list(
+                           POVOLANI = cmp_jaccard(), 
+                           TITULY = cmp_jaccard(), 
+                           BYDLISTEN = cmp_jaccard()
+                           # PRIJMENI = cmp_last_names()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = c("JMENO", "PRIJMENI", "ROK_NAROZENI", 
+                                "TITULY", "ZKRATKAP8", 
+                                "ZKRATKAN8", "BYDLISTEN", "POVOLANI"), 
+                         w1 = c(JMENO = 2, PRIJMENI = 2, ROK_NAROZENI = 2, 
+                                TITULY = 0.5, 
+                                ZKRATKAP8 = 0.5, ZKRATKAN8 = 0.5, 
+                                BYDLISTEN = 0.5, POVOLANI = 0.5),
+                         w0 = c(JMENO = -5, PRIJMENI = -5, ROK_NAROZENI = -5,
+                                TITULY = -0.25, 
+                                ZKRATKAP8 = 0, ZKRATKAN8 = 0, 
+                                BYDLISTEN = -0.25, POVOLANI = 0), 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
+                                         threshold = 6.25)
   
   link(selected_pairs_greedy, selection = "greedy") %>% 
     left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
