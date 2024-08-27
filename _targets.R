@@ -2,7 +2,7 @@
 library(targets)
 library(tarchetypes) # Load other packages as needed.
 
-tar_option_set(packages = c("dplyr", "rvest", "here", # "listr", 
+tar_option_set(packages = c("dplyr", "rvest", "here", 
                             "readxl", "readr", "reclin2", 
                             "tidyr", "names.cze"))
 
@@ -13,59 +13,69 @@ tar_source()
 # TODO: DiS. - https://cs.wikipedia.org/wiki/Diplomovan%C3%BD_specialista
 # TODO: matchování žen => potřeba rozdělit matchování na muže/ženy
 # TODO: dodatečné volby (would be nice in the future)
-# TODO: standardizovat MANDAT
-# M2006  M2010  M2014  M2018 MC2006 MC2010 MC2014  R2004  R2008  R2012 
-# 336    487    352     15     28     40     38   2019   1222   1970 
 
 # TODO: replace ´ in last name with ' (or ľ)
-# TODO: missing SEX (blbá jména)
+
+# TODO: volební zisk strany (viz Daubler + Chiru)
+# TODO: Tab 2 v overleafu?
 
 all_data <- list(
   tar_target(all_candidates, {
     bind_rows(
-      m_1994 %>% select(JMENO, PRIJMENI),
-      m_1998 %>% select(JMENO, PRIJMENI),
-      m_2002 %>% select(JMENO, PRIJMENI),
-      m_2006 %>% select(JMENO, PRIJMENI),
-      m_2010 %>% select(JMENO, PRIJMENI),
-      m_2014 %>% select(JMENO, PRIJMENI),
-      m_2018 %>% select(JMENO, PRIJMENI),
-      m_2022 %>% select(JMENO, PRIJMENI),
-      mc_1994 %>% select(JMENO, PRIJMENI),
-      mc_1998 %>% select(JMENO, PRIJMENI),
-      mc_2002 %>% select(JMENO, PRIJMENI),
-      mc_2006 %>% select(JMENO, PRIJMENI),
-      mc_2010 %>% select(JMENO, PRIJMENI),
-      mc_2014 %>% select(JMENO, PRIJMENI),
-      mc_2018 %>% select(JMENO, PRIJMENI),
-      mc_2022 %>% select(JMENO, PRIJMENI),
-      reg_2000 %>% select(JMENO, PRIJMENI),
-      reg_2004 %>% select(JMENO, PRIJMENI),
-      reg_2008 %>% select(JMENO, PRIJMENI),
-      reg_2012 %>% select(JMENO, PRIJMENI),
-      reg_2016 %>% select(JMENO, PRIJMENI),
-      reg_2020 %>% select(JMENO, PRIJMENI),
-      psp_1996 %>% select(JMENO, PRIJMENI),
-      psp_1998 %>% select(JMENO, PRIJMENI),
-      psp_2002 %>% select(JMENO, PRIJMENI),
-      psp_2006 %>% select(JMENO, PRIJMENI),
-      psp_2010 %>% select(JMENO, PRIJMENI),
-      psp_2013 %>% select(JMENO, PRIJMENI),
-      psp_2017 %>% select(JMENO, PRIJMENI),
-      psp_2021 %>% select(JMENO, PRIJMENI),
-      senate_df %>% select(JMENO, PRIJMENI),
-      ep_2004 %>% select(JMENO, PRIJMENI),
-      ep_2009 %>% select(JMENO, PRIJMENI),
-      ep_2014 %>% select(JMENO, PRIJMENI),
-      ep_2019 %>% select(JMENO, PRIJMENI),
-      ep_2024 %>% select(JMENO, PRIJMENI)
+      m_1994 %>% select(first_name, last_name),
+      m_1998 %>% select(first_name, last_name),
+      m_2002 %>% select(first_name, last_name),
+      m_2006 %>% select(first_name, last_name),
+      m_2010 %>% select(first_name, last_name),
+      m_2014 %>% select(first_name, last_name),
+      m_2018 %>% select(first_name, last_name),
+      m_2022 %>% select(first_name, last_name),
+      mc_1994 %>% select(first_name, last_name),
+      mc_1998 %>% select(first_name, last_name),
+      mc_2002 %>% select(first_name, last_name),
+      mc_2006 %>% select(first_name, last_name),
+      mc_2010 %>% select(first_name, last_name),
+      mc_2014 %>% select(first_name, last_name),
+      mc_2018 %>% select(first_name, last_name),
+      mc_2022 %>% select(first_name, last_name),
+      reg_2000 %>% select(first_name, last_name),
+      reg_2004 %>% select(first_name, last_name),
+      reg_2008 %>% select(first_name, last_name),
+      reg_2012 %>% select(first_name, last_name),
+      reg_2016 %>% select(first_name, last_name),
+      reg_2020 %>% select(first_name, last_name),
+      psp_1996 %>% select(first_name, last_name),
+      psp_1998 %>% select(first_name, last_name),
+      psp_2002 %>% select(first_name, last_name),
+      psp_2006 %>% select(first_name, last_name),
+      psp_2010 %>% select(first_name, last_name),
+      psp_2013 %>% select(first_name, last_name),
+      psp_2017 %>% select(first_name, last_name),
+      psp_2021 %>% select(first_name, last_name),
+      senate_df %>% select(first_name, last_name),
+      ep_2004 %>% select(first_name, last_name),
+      ep_2009 %>% select(first_name, last_name),
+      ep_2014 %>% select(first_name, last_name),
+      ep_2019 %>% select(first_name, last_name),
+      ep_2024 %>% select(first_name, last_name)
     ) %>% unique()
   }), 
   
   tar_target(
     multiple_last_names, {
       all_candidates %>% 
-        filter(grepl("\\s|-", PRIJMENI))
+        filter(grepl("\\s|-", last_name))
+    }
+  ),
+  
+  tar_target(
+    unique_first_names, {
+      # all_candidates %>% 
+      # select(JMENO) %>% 
+      # unique() %>% 
+      # saveRDS(., "output/unique_names.rds")
+      readRDS("output/unique_names.rds") %>% 
+        categorize_by_first_name()
     }
   ),
   
@@ -76,8 +86,8 @@ all_data <- list(
   tar_target(
     multiple_last_names_eligible, {
       multiple_last_names %>% 
-        filter(!grepl("^(Al|El|Van|Da|De|Del|Di|in|le|Abu|Abú)\\b", PRIJMENI, ignore.case = TRUE)) %>% 
-        pull(PRIJMENI) %>% 
+        filter(!grepl("^(Al|El|Van|Da|De|Del|Di|in|le|Abu|Abú)\\b", last_name, ignore.case = TRUE)) %>% 
+        pull(last_name) %>% 
         strsplit(., "\\s|-") %>% 
         unlist() %>% 
         gsub("\\(|\\)", "", .) %>% 
@@ -144,7 +154,7 @@ psp_data <- list(
              ROK_NAROZENI = 1996 - VEK) %>% 
       rename(VOLKRAJ = KRAJ) %>% 
       left_join(., kraje_do_2000, by = "VOLKRAJ") %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       mutate(
         TITULY = case_when(
           PRIJMENI == "PaličkaCSc" ~ "Ing. CSc.",
@@ -159,7 +169,8 @@ psp_data <- list(
         MANDAT = as.numeric(ZVOLEN1S != 0 | ZVOLEN2S != 0)
       ) %>% 
       select(-c(ZVOLEN1S, ZVOLEN2S)) %>% 
-      filter(PRIJMENI != "vytištěného HL")
+      filter(PRIJMENI != "vytištěného HL") %>% 
+      rename_variables()
   }),
   
   tar_target(psp_1998, command = {
@@ -171,7 +182,7 @@ psp_data <- list(
              ROK_NAROZENI = 1998 - VEK) %>% 
       rename(VOLKRAJ = KRAJ) %>% 
       left_join(., kraje_do_2000, by = "VOLKRAJ") %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       mutate(
         TITULZA = case_when(
           PRIJMENI == "Kaňák CSc." ~ "CSc.", 
@@ -187,7 +198,8 @@ psp_data <- list(
       ) %>% 
       select(-c(ZVOLEN1S, ZVOLEN2S)) %>% 
       merge_and_recode_titles %>% 
-      filter(PRIJMENI != "HLASOVACÍHO LÍSTKU")
+      filter(PRIJMENI != "HLASOVACÍHO LÍSTKU") %>% 
+      rename_variables()
   }),
   
   tar_target(psp_2002, command = {
@@ -201,7 +213,9 @@ psp_data <- list(
       mutate(row_id = row_number(), 
              ROK_NAROZENI = 2002 - VEK) %>% 
       left_join(., kraje_po_2000, by = "VOLKRAJ") %>% 
-      categorize_sex
+      categorize_sex(., unique_first_names) %>% 
+      select(-c(POCPROC)) %>% 
+      rename_variables()
   }),
   
   tar_target(psp_2006, command = {
@@ -214,7 +228,9 @@ psp_data <- list(
     read_candidates(here("data", "PS2006", "PS2006reg2006", "PSRK.xlsx"), 
                     psp_parties, cpp, cns, clean_dbf_excel_colnames) %>% 
       left_join(., kraje_po_2000, by = "VOLKRAJ") %>% 
-      categorize_sex
+      categorize_sex(., unique_first_names) %>% 
+      select(-c(POCPROC, ZKRATKAK8, PORADIMAND, PORADINAHR)) %>% 
+      rename_variables()
   }),
   
   tar_target(psp_2010, command = {
@@ -227,8 +243,10 @@ psp_data <- list(
     read_candidates(here("data", "PS2010", "PS2010reg2010", "PSRK.xlsx"), 
                     psp_parties, cpp, cns, clean_dbf_excel_colnames) %>% 
       left_join(., kraje_po_2000, by = "VOLKRAJ") %>% 
-      categorize_sex %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      categorize_sex(., unique_first_names) %>% 
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(POCPROC, ZKRATKAK8, PORADIMAND, PORADINAHR)) %>% 
+      rename_variables()
   }),
   
   tar_target(psp_2013, command = {
@@ -241,8 +259,10 @@ psp_data <- list(
     read_candidates(here("data", "PS2013", "PS2013reg20131026", "PSRK.xlsx"), 
                     psp_parties, cpp, cns, clean_dbf_excel_colnames) %>% 
       left_join(., kraje_po_2000, by = "VOLKRAJ") %>% 
-      categorize_sex %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      categorize_sex(., unique_first_names) %>% 
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(POCPROC, ZKRATKAK8, PORADIMAND, PORADINAHR)) %>% 
+      rename_variables()
   }),
   
   tar_target(psp_2017, command = {
@@ -254,9 +274,11 @@ psp_data <- list(
       mutate(PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
              MANDAT = ifelse(MANDAT == "A", 1, 0)) %>% 
       left_join(., kraje_po_2000, by = "VOLKRAJ") %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(POCPROC, ZKRATKAK8, PORADIMAND, PORADINAHR)) %>% 
+      rename_variables()
   }),
   
   tar_target(psp_2021, command = {
@@ -268,8 +290,10 @@ psp_data <- list(
       mutate(PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
              MANDAT = ifelse(MANDAT == "A", 1, 0)) %>% 
       left_join(., kraje_po_2000, by = "VOLKRAJ") %>% 
-      categorize_sex %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      categorize_sex(., unique_first_names) %>% 
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(POHLAVI, SKRUTINIUM, ZKRATKAK8, PORADIMAND, PORADINAHR)) %>% 
+      rename_variables()
   }), 
   
   tar_target(psp_panel, {
@@ -652,8 +676,9 @@ reg_data <- list(
              ROK_NAROZENI = year - VEK) %>%
       merge_and_recode_titles %>%
       rename(NAZEV_STRK = KSTRANA_NAZEV) %>% 
-      categorize_sex() %>% 
-      remove_order_from_last_name()
+      categorize_sex(., unique_first_names) %>% 
+      remove_order_from_last_name() %>% 
+      select(-POCPROC) %>% rename_variables()
   }),
   
   tar_target(reg_2004, command = {
@@ -665,11 +690,14 @@ reg_data <- list(
       left_join(., cpp, by = "PSTRANA") %>%
       left_join(., cns, by = "NSTRANA") %>%
       mutate(row_id = row_number(), 
-             ROK_NAROZENI = year - VEK) %>%
+             ROK_NAROZENI = year - VEK, 
+             MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>%
       merge_and_recode_titles %>%
       rename(NAZEV_STRK = KSTRANA_NAZEV) %>% 
-      categorize_sex() %>% 
-      remove_order_from_last_name()
+      categorize_sex(., unique_first_names) %>% 
+      remove_order_from_last_name() %>% 
+      select(-c(POCPROC)) %>% 
+      rename_variables() 
   }),
   
   tar_target(reg_2008, command = {
@@ -682,9 +710,11 @@ reg_data <- list(
                     clean_dbf_excel_colnames)
     read_candidates(here("data", "KZ2008", "kz2008_data_dbf", "KZRK.xlsx"), 
                     parties, cpp, cns, clean_dbf_excel_colnames) %>% 
-      categorize_sex %>% 
-      select(-PORADIHAHR) %>% 
-      mutate(PRIJMENI = if_else(PRIJMENI == "Svoboda gen.", "Svoboda", PRIJMENI))
+      categorize_sex(., unique_first_names) %>% 
+      mutate(PRIJMENI = if_else(PRIJMENI == "Svoboda gen.", "Svoboda", PRIJMENI), 
+             MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
+      select(-c(PORADIMAND, PORADIHAHR, ZKRATKAK8, POCPROC)) %>% 
+      rename_variables()
       
   }),
   
@@ -698,10 +728,12 @@ reg_data <- list(
                     clean_dbf_excel_colnames)
     read_candidates(here("data", "KZ2012", "kz2012_data_dbf", "KZRK.xlsx"), 
                     parties, cpp, cns, clean_dbf_excel_colnames) %>% 
-      categorize_sex %>% 
-      select(-PORADIHAHR) %>% 
+      categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      mutate(MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
+      select(-c(PORADIMAND, PORADIHAHR, ZKRATKAK8, POCPROC)) %>% 
+      rename_variables()
   }),
   
   tar_target(reg_2016, command = {
@@ -713,8 +745,10 @@ reg_data <- list(
                     parties, cpp, cns) %>%
       mutate(PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
              MANDAT = ifelse(MANDAT == "A", 1, 0)) %>% 
-      categorize_sex %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      categorize_sex(., unique_first_names) %>% 
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(PORADIMAND, PORADINAHR, ZKRATKAK8, POCPROC, POHLAVI)) %>% 
+      rename_variables()
   }),
   
   tar_target(reg_2020, command = {
@@ -726,8 +760,10 @@ reg_data <- list(
                     parties, cpp, cns) %>%
       mutate(PLATNOST = ifelse(PLATNOST == "A", 0, 1), 
              MANDAT = ifelse(MANDAT == "A", 1, 0)) %>% 
-      categorize_sex %>% 
-      remove_order_from_last_name()
+      categorize_sex(., unique_first_names) %>% 
+      remove_order_from_last_name() %>% 
+      select(-c(PORADIMAND, PORADINAHR, ZKRATKAK8, POCPROC, POHLAVI)) %>% 
+      rename_variables()
   }), 
   
   tar_target(reg_panel, {
@@ -942,7 +978,9 @@ mun_data <- list(
           gsub(",$", "", .)
       ) %>% 
       extract_titles_from_first_name %>% 
-      categorize_sex
+      categorize_sex(., unique_first_names) %>% 
+      select(-c(SLOZENI, VSTRANA, OKRES)) %>% 
+      rename_variables()
   }),
   
   tar_target(mun_1998, command = {
@@ -970,9 +1008,11 @@ mun_data <- list(
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
                                PRIJMENI) %>% 
                gsub(",$", "", .)) %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       mutate(PRIJMENI = if_else(PRIJMENI == "Viktora starší", "Viktora", PRIJMENI)) %>% 
-      filter(PRIJMENI != "vytištěného HL")
+      filter(PRIJMENI != "vytištěného HL") %>% 
+      select(-c(SLOZENI, VSTRANA, ZKRATKAV30, OKRES)) %>% 
+      rename_variables()
   }),
   
   tar_target(mun_2002, command = {
@@ -1040,14 +1080,16 @@ mun_data <- list(
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
                                PRIJMENI)) %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name %>% 
       mutate(
         PRIJMENI = gsub(",.*", "", PRIJMENI) %>% 
           gsub("\\(r\\.", "(", .) %>% 
           gsub("\\.$", "", .) %>% 
           stringr::str_trim(., "both")
-      )
+      ) %>% 
+      select(-c(OKRES, OSTRANA)) %>% 
+      rename_variables()
   }),
   
   tar_target(mun_2006, command = {
@@ -1065,12 +1107,16 @@ mun_data <- list(
                             JMENO),
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
-                               PRIJMENI)) %>% 
-      categorize_sex %>% 
+                               PRIJMENI), 
+             MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
+      categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name %>% 
       mutate(PRIJMENI = gsub(",\\sroz\\.", "", PRIJMENI) %>% 
                gsub("\\sroz\\.", "", .) %>% 
-               gsub("\\(roz\\.[ ]*", "(", .))
+               gsub("\\(roz\\.[ ]*", "(", .)) %>% 
+      select(-c(OKRES, OSTRANA, PORADINAHR, POHLAVI, DATNAR, 
+                PORADIMAND, POCHL_PRES)) %>% 
+      rename_variables()
   }),
   
   tar_target(mun_2010, command = {
@@ -1090,7 +1136,8 @@ mun_data <- list(
                             JMENO),
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
-                               PRIJMENI)) %>% 
+                               PRIJMENI), 
+             MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
       mutate(
         TITULZA = case_when(
           PRIJMENI == "Říčařová,CSc." ~ "CSc.",
@@ -1105,14 +1152,17 @@ mun_data <- list(
         ) %>% gsub(",$", "", .)
       ) %>% 
       merge_and_recode_titles() %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       mutate(PRIJMENI = gsub(",\\sroz\\.", "", PRIJMENI) %>% 
                gsub("\\sroz\\.", "", .) %>% 
                gsub("\\(roz\\.[ ]*", "(", .) %>% 
                gsub(",\\srozená", "", .) %>% 
                gsub(",roz\\.", "", .) %>% 
                gsub("\\(rozená\\s", "(", .)) %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(OKRES, OSTRANA, PORADINAHR, POHLAVI, DATNAR, 
+                PORADIMAND, POCHL_PRES)) %>% 
+      rename_variables()
   }),
   
   tar_target(mun_2014, command = {
@@ -1132,8 +1182,9 @@ mun_data <- list(
                             JMENO),
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
-                               PRIJMENI)) %>% 
-      categorize_sex %>% 
+                               PRIJMENI), 
+             MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
+      categorize_sex(., unique_first_names) %>% 
       mutate(PRIJMENI = gsub(",\\sroz\\.", "", PRIJMENI) %>% 
                gsub("\\sroz\\.", "", .) %>% 
                gsub("\\([ ]*roz\\.[ ]*", "(", .) %>% 
@@ -1141,7 +1192,10 @@ mun_data <- list(
                gsub(",roz\\.", "", .) %>% 
                gsub("\\(rozená\\s", "(", .) %>% 
                gsub(",\\s", " ", .)) %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(OKRES, OSTRANA, PORADINAHR, POHLAVI, DATNAR, 
+                PORADIMAND, POCHL_PRES)) %>% 
+      rename_variables()
   }),
   
   tar_target(mun_2018, command = {
@@ -1164,7 +1218,7 @@ mun_data <- list(
              PRIJMENI = ifelse(PRIJMENI == toupper(PRIJMENI), 
                                stringr::str_to_title(PRIJMENI, locale = "cs"), 
                                PRIJMENI)) %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       mutate(
         TITULZA = case_when(
           PRIJMENI == "McComb B.A. B.Ed." ~ "B.A. B.Ed.",
@@ -1180,7 +1234,10 @@ mun_data <- list(
                gsub("\\([ ]*roz\\.[ ]*", "(", .) %>% 
                gsub("\\([ ]*býv\\.[ ]*", "(", .) %>% 
                gsub("\\.$", "", .)) %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(OKRES, OSTRANA, PORADINAHR, POHLAVI, DATNAR, 
+                PORADIMAND, POCHL_PRES)) %>% 
+      rename_variables()
   }), 
   
   tar_target(mun_2022, command = {
@@ -1218,7 +1275,7 @@ mun_data <- list(
         )
       ) %>% 
       merge_and_recode_titles %>% 
-      categorize_sex %>% 
+      categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
       mutate(PRIJMENI = gsub(",\\sroz\\.", "", PRIJMENI) %>% 
                gsub("\\(č.p. [0-9]+\\)", "", .) %>% 
@@ -1230,7 +1287,10 @@ mun_data <- list(
                gsub("\\,$", "", .) %>% 
                stringr::str_trim() %>% 
                gsub("\\sml\\.$", "", .)) %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(OKRES, OSTRANA, PORADINAHR, 
+                PORADIMAND, PRESKOCENI)) %>% 
+      rename_variables()
   }),
   
   tar_target(district_municipalities_map, {
@@ -1618,7 +1678,7 @@ mun_data <- list(
   
   ## Municipalities ---------------------------------------
   tar_target(m_1994, filter_municipalities(mun_1994, district_municipalities_map) %>%
-               mutate(PRIJMENI = gsub('"o', "ö", PRIJMENI) %>%
+               mutate(last_name = gsub('"o', "ö", last_name) %>%
                         gsub('o"', "ö", .) %>%
                         gsub('u"', "ü", .)
                )),
@@ -1991,7 +2051,9 @@ ep_data <- list(
     read_candidates_xml(here("data", "EP2004", "EP2004reg", "eprk.xml"), 
                         parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)}) %>% 
       mutate(ROK_NAROZENI = 2004 - VEK) %>% 
-      categorize_sex
+      categorize_sex(., unique_first_names) %>% 
+      select(-c(POCPROC, PORADIMAND, PORADINAHR, ZKRATKAK8)) %>% 
+      rename_variables()
   }),
   
   tar_target(ep_2009, command = {
@@ -2002,8 +2064,10 @@ ep_data <- list(
     read_candidates_xml(here("data", "EP2009", "EP2009reg", "eprk.xml"), 
                         parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)}) %>% 
       mutate(ROK_NAROZENI = 2009 - VEK) %>% 
-      categorize_sex %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      categorize_sex(., unique_first_names) %>% 
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(POCPROC, PORADIMAND, PORADINAHR, ZKRATKAK8)) %>% 
+      rename_variables()
   }),
   
   tar_target(ep_2014, command = {
@@ -2014,8 +2078,10 @@ ep_data <- list(
     read_candidates_xml(here("data", "EP2014", "EP2014reg20140525", "eprk.xml"), 
                         parties, cpp, cns, function(x) {x %>% rename(KSTRANA = ESTRANA)}) %>% 
       mutate(ROK_NAROZENI = 2014 - VEK) %>% 
-      categorize_sex %>% 
-      filter(JMENO != "Registrační úřad ponechal pozici volnou")
+      categorize_sex(., unique_first_names) %>% 
+      filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
+      select(-c(POCPROC, PORADIMAND, PORADINAHR, ZKRATKAK8)) %>% 
+      rename_variables()
   }),
   
   tar_target(ep_2019, command = {
@@ -2028,7 +2094,9 @@ ep_data <- list(
                         mutate(MANDAT = ifelse(MANDAT == "A", 1, 0))}) %>% 
       mutate(ROK_NAROZENI = 2019 - VEK) %>% 
       select(-c(DATNAR, POHLAVI)) %>% 
-      categorize_sex
+      categorize_sex(., unique_first_names) %>% 
+      select(-c(POCPROC, PORADIMAND, PORADINAHR, ZKRATKAK8)) %>% 
+      rename_variables()
   }), 
   
   tar_target(ep_2024, command = {
@@ -2041,7 +2109,9 @@ ep_data <- list(
                         mutate(MANDAT = ifelse(MANDAT == "A", 1, 0))}) %>% 
       mutate(ROK_NAROZENI = 2024 - VEK) %>% 
       select(-c(POHLAVI)) %>% 
-      categorize_sex
+      categorize_sex(., unique_first_names) %>% 
+      select(-c(POCPROC, PORADIMAND, PORADINAHR, ZKRATKAK8)) %>% 
+      rename_variables()
   }),
   
   tar_target(ep_panel, command = {
@@ -2186,7 +2256,11 @@ senate_data <- list(
             if_else(. == "Coolidge, rozená Hašková", "Coolidge (Hašková)", .)
         ) %>% 
         merge_and_recode_titles() %>% 
-        categorize_sex
+        categorize_sex(., unique_first_names) %>% 
+        mutate(MANDAT = as.numeric(ZVOLEN_K1 == 1 | ZVOLEN_K2 == 1)) %>% 
+        select(-c(VSTRANA, PROC_K1, PROC_K2, LOS_K1, LOS_K2, ZVOLEN_K1, 
+                  ZVOLEN_K2)) %>% 
+        rename_variables()
     }
   ), 
   
@@ -2204,10 +2278,10 @@ senate_data <- list(
     # check that multiple by-election were not hold in the same Senate district
     byelection_districts_unique, {
       stopifnot(senate_df %>% 
-        filter(DATUMVOLEB %in% byelection_dates) %>% 
-        select(DATUMVOLEB, OBVOD) %>% 
+        filter(election_date %in% byelection_dates) %>% 
+        select(election_date, senate_district) %>% 
         unique() %>% 
-        count(OBVOD, sort = TRUE) %>% 
+        count(senate_district, sort = TRUE) %>% 
         pull(n) %>% 
         all(. == 1))
     }
@@ -2225,15 +2299,15 @@ senate_data <- list(
   tar_target(
     sen_1996, {
       senate_df %>% 
-        filter(DATUMVOLEB == 19961116)
+        filter(election_date == 19961116)
     }
   ),
   
   tar_target(
     sen_1996a, {
       senate_df %>% 
-        filter(DATUMVOLEB == 19961116) %>% 
-        filter(OBVOD %in% sen_1998$OBVOD) %>% 
+        filter(election_date == 19961116) %>% 
+        filter(senate_district %in% sen_1998$senate_district) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2241,8 +2315,8 @@ senate_data <- list(
   tar_target(
     sen_1996b, {
       senate_df %>% 
-        filter(DATUMVOLEB == 19961116) %>% 
-        filter(OBVOD %in% sen_2000$OBVOD) %>% 
+        filter(election_date == 19961116) %>% 
+        filter(senate_district %in% sen_2000$senate_district) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2250,8 +2324,8 @@ senate_data <- list(
   tar_target(
     sen_1996c, {
       senate_df %>% 
-        filter(DATUMVOLEB == 19961116) %>% 
-        filter(OBVOD %in% sen_2002$OBVOD) %>% 
+        filter(election_date == 19961116) %>% 
+        filter(senate_district %in% sen_2002$senate_district) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2259,7 +2333,7 @@ senate_data <- list(
   tar_target(
     sen_1998, {
       senate_df %>% 
-        filter(DATUMVOLEB == 19981114) %>% 
+        filter(election_date == 19981114) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2267,7 +2341,7 @@ senate_data <- list(
   tar_target(
     sen_2000, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20001112) %>% 
+        filter(election_date == 20001112) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2275,7 +2349,7 @@ senate_data <- list(
   tar_target(
     sen_2002, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20021025) %>% 
+        filter(election_date == 20021025) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2283,7 +2357,7 @@ senate_data <- list(
   tar_target(
     sen_2004, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20041105) %>% 
+        filter(election_date == 20041105) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2291,7 +2365,7 @@ senate_data <- list(
   tar_target(
     sen_2006, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20061020) %>% 
+        filter(election_date == 20061020) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2299,7 +2373,7 @@ senate_data <- list(
   tar_target(
     sen_2008, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20081017) %>% 
+        filter(election_date == 20081017) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2307,7 +2381,7 @@ senate_data <- list(
   tar_target(
     sen_2010, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20101015) %>% 
+        filter(election_date == 20101015) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2315,7 +2389,7 @@ senate_data <- list(
   tar_target(
     sen_2012, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20121012) %>% 
+        filter(election_date == 20121012) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2323,7 +2397,7 @@ senate_data <- list(
   tar_target(
     sen_2014, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20141010) %>% 
+        filter(election_date == 20141010) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2331,7 +2405,7 @@ senate_data <- list(
   tar_target(
     sen_2016, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20161007) %>% 
+        filter(election_date == 20161007) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2339,7 +2413,7 @@ senate_data <- list(
   tar_target(
     sen_2018, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20181005) %>% 
+        filter(election_date == 20181005) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2347,7 +2421,7 @@ senate_data <- list(
   tar_target(
     sen_2020, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20201002) %>% 
+        filter(election_date == 20201002) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2355,7 +2429,7 @@ senate_data <- list(
   tar_target(
     sen_2022, {
       senate_df %>% 
-        filter(DATUMVOLEB == 20220923) %>% 
+        filter(election_date == 20220923) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2763,15 +2837,15 @@ senate_data <- list(
       sen_panel_c <- full_join(pivot_table_long_c, sc_candidates, by = c("row_id", "year"))
       
       sen_byelection <- senate_df %>% 
-        filter(DATUMVOLEB %in% byelection_dates) %>% 
+        filter(election_date %in% byelection_dates) %>% 
         mutate(
           row_id = row_number(), 
           person_id = paste0("B", row_id)
         )
       
-      sen_a_b <- match_sen_data(sen_panel_a, sen_panel_b, c("JMENO", "PRIJMENI"))
-      sen_b_c <- match_sen_data(sen_panel_b, sen_panel_c, c("JMENO", "PRIJMENI"))
-      sen_a_c <- match_sen_data(sen_panel_a, sen_panel_c, c("JMENO", "PRIJMENI"))
+      sen_a_b <- match_sen_data(sen_panel_a, sen_panel_b, c("first_name", "last_name"))
+      sen_b_c <- match_sen_data(sen_panel_b, sen_panel_c, c("first_name", "last_name"))
+      sen_a_c <- match_sen_data(sen_panel_a, sen_panel_c, c("first_name", "last_name"))
       
       sen_a_b_pivot <- sen_a_b %>% 
         select(person_id.x, person_id.y) %>% 
@@ -2849,10 +2923,7 @@ senate_data <- list(
       
       full_join(sen_byel_pivot_long, sen_all_candidates, by = c("panel_id"="person_id", "panel")) %>% 
         arrange(person_id, year) %>% 
-        select(-c(panel, panel_id)) %>% 
-        mutate(MANDAT = as.numeric(ZVOLEN_K1 == 1 | ZVOLEN_K2 == 1)) %>% 
-        select(-c(ZVOLEN_K1, ZVOLEN_K2, LOS_K1, LOS_K2, 
-                  URIZ_PR_K1, URIZ_PR_K2))
+        select(-c(panel, panel_id))
     }
   ),
   
@@ -2866,7 +2937,7 @@ senate_data <- list(
   tar_target(
     sen_panel_check_unique_date_per_person, {
       stopifnot(sen_panel %>% 
-                  count(person_id, DATUMVOLEB, sort = TRUE) %>% 
+                  count(person_id, election_date, sort = TRUE) %>% 
                   pull(n) %>% all(. == 1))
     }
   ),
@@ -2892,7 +2963,7 @@ summary_stats <- list(
         mutate(year = paste0("City districts ", year)),
       sen_panel %>% 
         mutate(election = case_when(
-          DATUMVOLEB %in% c(19961116, 19981114, 
+          election_date %in% c(19961116, 19981114, 
                             20001112, 20021025,
                             20041105, 20061020, 
                             20081017, 20101015,
@@ -2923,11 +2994,12 @@ matched_panels <- list(
   tar_target(
     mc_mun_panel, {
       mc_obec <- read_csv("data/mcast_obec.csv", locale = locale(encoding = "WINDOWS-1250")) %>% 
-        select(MC_KODZASTUP = CHODNOTA1, KODZASTUP = CHODNOTA2)
+        select(city_district_id = CHODNOTA1, municipality_id = CHODNOTA2)
       
       mc_panel_harm <- mc_panel %>% 
-        rename(MC_KODZASTUP = KODZASTUP) %>% 
-        left_join(mc_obec, by = "MC_KODZASTUP")
+        rename(city_district_id = municipality_id) %>% 
+        left_join(mc_obec, by = "city_district_id") %>% 
+        select(-MUNICIPALITY)
       
       match_m_mc <- match_mun_panel_data(m_panel, mc_panel_harm)
       
@@ -3083,8 +3155,8 @@ matched_panels <- list(
           filter(any(person_id == i))
         (check_df <- all_candidates %>% 
           filter(person_id %in% check_ids$person_id) %>% 
-          select(year, election, JMENO, PRIJMENI, POVOLANI, ROK_NAROZENI, ZKRATKAN8, 
-                 ZKRATKAP8))
+          select(year, election, first_name, last_name, occupation, birth_year, 
+                 party_membership_abbv, nominating_party_abbv))
         
         ok <- (anyDuplicated(check_df$election) == 0)
         if(ok){
@@ -3133,7 +3205,7 @@ matched_panels <- list(
     mun_reg_panel, {
       
       missing_obce <- tribble(
-        ~KODZASTUP, ~KRAJ_NAZEV,
+        ~KODZASTUP, ~region_name,
         530255, "Středočeský kraj",
         533131, "Středočeský kraj",
         537012, "Středočeský kraj",
@@ -3170,11 +3242,11 @@ matched_panels <- list(
       mun_kraj <- read_csv("data/obec_kraj.csv", 
                            locale = locale(encoding = "WINDOWS-1250")) %>% 
         select(KODZASTUP = CHODNOTA1, 
-               KRAJ_NAZEV = TEXT2) %>% 
+               region_name = TEXT2) %>% 
         bind_rows(., missing_obce)
       
       kraje <- tribble(
-        ~KRZAST, ~KRAJ_NAZEV,
+        ~KRZAST, ~region_name,
         1, "Středočeský kraj",
         2, "Jihočeský kraj",
         3, "Plzeňský kraj",
@@ -3191,11 +3263,11 @@ matched_panels <- list(
       )
       
       mun_panel_harm <- mc_mun_panel %>% 
-        left_join(., mun_kraj, by = c("MUNICIPALITY"="KODZASTUP")) %>% 
+        left_join(., mun_kraj, by = c("municipality_id"="KODZASTUP")) %>% 
         select(-person_id) %>% 
         rename(person_id = panel_id)
       reg_panel_harm <- reg_panel %>% 
-        left_join(., kraje, by = "KRZAST") %>% 
+        left_join(., kraje, by = c("region_code"="KRZAST")) %>% 
         mutate(election = paste0("R", year))
       
       mun_reg_match <- match_mun_reg_panel(mun_panel_harm, reg_panel_harm)
@@ -3352,8 +3424,9 @@ matched_panels <- list(
           filter(any(person_id == i))
         (check_df <- all_candidates %>% 
             filter(person_id %in% check_ids$person_id) %>% 
-            select(year, election, JMENO, PRIJMENI, POVOLANI, ROK_NAROZENI, ZKRATKAN8, 
-                   ZKRATKAP8))
+            select(year, election, first_name, last_name, 
+                   occupation, birth_year, nominating_party_abbv, 
+                   party_membership_abbv))
         
         ok <- (anyDuplicated(check_df$election) == 0)
         if(ok){
@@ -3599,7 +3672,7 @@ matched_panels <- list(
         select(-person_id) %>% 
         rename(person_id = panel_id)
       sen_panel_harm <- sen_panel %>% 
-        mutate(PLATNOST = as.numeric(PLATNOST != "A"),
+        mutate(invalid_candidacy = as.numeric(invalid_candidacy != "A"),
                election = paste0("S", year))
       
       psp_sen_match <- match_psp_sen_panel(mr_psp_panel_harm, sen_panel_harm)
@@ -3781,7 +3854,7 @@ matched_panels <- list(
       ep_panel_harm <- ep_panel %>% 
         mutate(year = as.numeric(year), 
                election = paste0("EP", year), 
-               PLATNOST = as.numeric(PLATNOST != "A") %>% 
+               invalid_candidacy = as.numeric(invalid_candidacy != "A") %>% 
                  if_else(is.na(.), 0, .))
       
       psp_ep_match <- match_psp_sen_panel(psp_sen_panel_harm, ep_panel_harm)
@@ -3968,8 +4041,8 @@ matched_panels <- list(
 validations <- list(
   tar_target(kouba_lysek_2023_tab1, {
     mc_mun_panel %>% 
-      group_by(KODZASTUP, year) %>% 
-      summarise(n_stran = max(POR_STR_HL)) %>% 
+      group_by(municipality_id, year) %>% 
+      summarise(n_stran = max(party_no)) %>% 
       group_by(year) %>% 
       summarise(pct = mean(n_stran == 1) * 100)
   })
