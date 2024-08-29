@@ -453,25 +453,11 @@ cmp_within_1 <- function(){
   }
 }
 
-# cmp_tmp <- function(x, y){
-#   if(grepl("\\s|-", x) || grepl("\\s|-", y)){
-#     x_split <- unlist(strsplit(x, "\\s|-"))
-#     y_split <- unlist(strsplit(y, "\\s|-"))
-#     any(x_split) %in% y_split
-#   }else{
-#     x == y
-#   }
-# }
-
 cmp_last_names <- function(){
   function(x, y){
-    if(grepl("\\s|-", x) || grepl("\\s|-", y)){
-      x_split <- unlist(strsplit(gsub("\\(|\\)", "", x), "\\s|-"))
-      y_split <- unlist(strsplit(gsub("\\(|\\)", "", y), "\\s|-"))
-      any(x_split %in% y_split)
-    }else{
-      x == y
-    }
+    x_split <- strsplit(gsub("\\(|\\)", "", x), "\\s|-")
+    y_split <- strsplit(gsub("\\(|\\)", "", y), "\\s|-")
+    purrr::map2_lgl(x_split, y_split, function(x, y) { any(x %in% y) })
   }
 }
 
@@ -514,128 +500,232 @@ match_data <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
   link(selected_pairs_greedy, selection = "greedy")
 }
 
-match_reg_data <- function(d1, d2, blocking_vars = c("first_name", "last_name", "region_code")){
+match_reg_data <- function(d1, d2, multiple_last_names, 
+                           blocking_vars = c("first_name", "last_name", "region_code")){
   d1 <- d1 %>% 
     mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
     mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "title_before_name", "title_after_name", 
-                                       "party_membership_abbv", 
-                                       "nominating_party_abbv", 
-                                       "residence_name", "occupation"), 
-                         comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard() 
-                           # PRIJMENI = cmp_last_names()
-                           # TODO: stejný nebo větší titul
-                         ))
+  d1_multiple_names <- d1 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  d2_multiple_names <- d2 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
   
-  scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "title_before_name", "title_after_name", 
-                                "party_membership_abbv", 
-                                "nominating_party_abbv", 
-                                "residence_name", "occupation"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                title_before_name = 0.5, title_after_name = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                title_before_name = -0.5, title_after_name = -0.5, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.5, occupation = 0), 
-                         wna = 0)
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
   
-  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  comparing_vars <- c("first_name", "last_name", "birth_year", 
+                      "title_before_name", "title_after_name", 
+                      "party_membership_abbv", 
+                      "nominating_party_abbv", 
+                      "residence_name", "occupation")
+  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
+         title_before_name = 0.5, title_after_name = 0.5, 
+         party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
+         residence_name = 0.5, occupation = 0.5)
+  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
+         title_before_name = -0.5, title_after_name = -0.5, 
+         party_membership_abbv = 0, nominating_party_abbv = 0, 
+         residence_name = -0.5, occupation = 0)
   
-  link(selected_pairs_greedy, selection = "greedy")
-}
-
-match_psp_data <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
-  d1 <- d1 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
-  d2 <- d2 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "title_before_name", "title_after_name", 
-                                       "party_membership_abbv", "nominating_party_abbv", 
-                                       "residence_name", "occupation", 
-                                       "region_name"), 
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars,
+                            comparators = list(
+                              birth_year = cmp_within_1(),
+                              occupation = cmp_jaccard(),
+                              last_name = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", threshold = 6)
+  
+  mn_linked <- link(selected_pairs_greedy_mn, selection = "greedy")
+  
+  # link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
                            birth_year = cmp_within_1(),
                            occupation = cmp_jaccard()
-                           # PRIJMENI = cmp_last_names()
-                           # TODO: stejný nebo větší titul
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "title_before_name", "title_after_name", 
-                                "party_membership_abbv", "nominating_party_abbv", 
-                                "residence_name", "occupation", 
-                                "region_name"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                title_before_name = 0.5, title_after_name = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5, 
-                                region_name = 0.5),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                title_before_name = -0.5, title_after_name = -0.5, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.5, occupation = 0, 
-                                region_name = 0), 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
   
-  link(selected_pairs_greedy, selection = "greedy")
+  linked_no_change <- link(selected_pairs_greedy, selection = "greedy")
+  bind_rows(mn_linked, linked_no_change)
 }
 
-match_mun_data <- function(d1, d2, blocking_vars = c("first_name", "last_name", "municipality_id")){
+match_psp_data <- function(d1, d2, multiple_last_names, 
+                           blocking_vars = c("first_name", "last_name")){
+  d1 <- d1 %>% 
+    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+  
+  d1_multiple_names <- d1 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  d2_multiple_names <- d2 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("first_name", "last_name", "birth_year", 
+                      "title_before_name", "title_after_name", 
+                      "party_membership_abbv", "nominating_party_abbv", 
+                      "residence_name", "occupation", 
+                      "region_name")
+  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
+                 title_before_name = 0.5, title_after_name = 0.5, 
+                 party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
+                 residence_name = 0.5, occupation = 0.5, 
+                 region_name = 0.5)
+  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
+                 title_before_name = -0.5, title_after_name = -0.5, 
+                 party_membership_abbv = 0, nominating_party_abbv = 0, 
+                 residence_name = -0.5, occupation = 0, 
+                 region_name = 0)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars,
+                            comparators = list(
+                              birth_year = cmp_within_1(),
+                              occupation = cmp_jaccard(),
+                              last_name = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", threshold = 6)
+  
+  mn_linked <- link(selected_pairs_greedy_mn, selection = "greedy")
+  
+  # link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
+                         comparators = list(
+                           birth_year = cmp_within_1(),
+                           occupation = cmp_jaccard()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  
+  linked_no_change <- link(selected_pairs_greedy, selection = "greedy")
+  bind_rows(mn_linked, linked_no_change)
+}
+
+match_mun_data <- function(d1, d2, multiple_last_names, 
+                           blocking_vars = c("first_name", "last_name", "municipality_id")){
   d1 <- d1 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "titles", "party_membership_abbv", 
-                                       "nominating_party_abbv", "residence_name", 
-                                       "occupation"), 
+  d1_multiple_names <- d1 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  d2_multiple_names <- d2 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("first_name", "last_name", "birth_year", 
+                      "titles", "party_membership_abbv", 
+                      "nominating_party_abbv", "residence_name", 
+                      "occupation")
+  
+  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
+                 titles = 0.5, 
+                 party_membership_abbv = 0.5, 
+                 nominating_party_abbv = 0.5, 
+                 residence_name = 0.5, occupation = 0.5)
+  
+  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
+                 titles = -0.25, 
+                 party_membership_abbv = 0, 
+                 nominating_party_abbv = 0, 
+                 residence_name = -0.25, occupation = 0)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
+                            comparators = list(
+                              birth_year = cmp_within_1(),
+                              occupation = cmp_jaccard(), 
+                              titles = cmp_jaccard(), 
+                              residence_name = cmp_jaccard(),
+                              last_name = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", 
+                                            threshold = 6)
+  
+  linked_mn <- link(selected_pairs_greedy_mn, selection = "greedy")
+  
+  # Link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
                            birth_year = cmp_within_1(),
                            occupation = cmp_jaccard(), 
                            titles = cmp_jaccard(), 
                            residence_name = cmp_jaccard()
-                           # PRIJMENI = cmp_last_names()
-                           # TODO: stejný nebo větší titul
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "titles", "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                titles = 0.5, 
-                                party_membership_abbv = 0.5, 
-                                nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                titles = -0.25, 
-                                party_membership_abbv = 0, 
-                                nominating_party_abbv = 0, 
-                                residence_name = -0.25, occupation = 0), 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
                                          threshold = 6)
   
-  link(selected_pairs_greedy, selection = "greedy")
+  linked_others <- link(selected_pairs_greedy, selection = "greedy")
+  
+  bind_rows(linked_mn, linked_others)
 }
 
 match_sen_data <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
@@ -680,128 +770,253 @@ match_sen_data <- function(d1, d2, blocking_vars = c("first_name", "last_name"))
   link(selected_pairs_greedy, selection = "greedy")
 }
 
-match_mun_panel_data <- function(d1, d2, blocking_vars = c("first_name", "last_name", "municipality_id")){
+match_mun_panel_data <- function(d1, d2, multiple_last_names, 
+                                 blocking_vars = c("first_name", "last_name", "municipality_id")){
   d1 <- d1 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "titles", "party_membership_abbv", 
-                                       "nominating_party_abbv", "residence_name", "occupation"), 
+  d1_multiple_names <- d1 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  d2_multiple_names <- d2 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("first_name", "last_name", "birth_year", 
+                      "titles", "party_membership_abbv", 
+                      "nominating_party_abbv", "residence_name", "occupation")
+  
+  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
+                 titles = 0.5, 
+                 party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
+                 residence_name = 0.5, occupation = 0.5)
+  
+  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
+                 titles = -0.25, 
+                 party_membership_abbv = 0, nominating_party_abbv = 0, 
+                 residence_name = -0.25, occupation = 0)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
+                            comparators = list(
+                              birth_year = cmp_within_1(),
+                              occupation = cmp_jaccard(), 
+                              titles = cmp_jaccard(), 
+                              residence_name = cmp_jaccard(),
+                              last_name = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", 
+                                            threshold = 6)
+  
+  linked_mn <- link(selected_pairs_greedy_mn, selection = "greedy") %>% 
+    left_join(., scores_mn %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  # Link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
+                           birth_year = cmp_within_1(),
                            occupation = cmp_jaccard(), 
                            titles = cmp_jaccard(), 
                            residence_name = cmp_jaccard()
-                           # last_name = cmp_last_names()
-                           # TODO: stejný nebo větší titul
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "titles", "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                titles = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                titles = -0.25, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.25, occupation = 0), 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
                                          threshold = 6)
   
-  link(selected_pairs_greedy, selection = "greedy") %>% 
+  linked_others <- link(selected_pairs_greedy, selection = "greedy") %>% 
     left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  bind_rows(linked_mn, linked_others)
 }
 
-match_mun_reg_panel <- function(d1, d2, blocking_vars = c("first_name", "last_name", "region_name")){
+match_mun_reg_panel <- function(d1, d2, multiple_last_names, 
+                                blocking_vars = c("first_name", "last_name", "region_name")){
   d1 <- d1 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "titles", "party_membership_abbv", 
-                                       "nominating_party_abbv", "residence_name", 
-                                       "occupation", 
-                                       "region_name"), 
+  d1_multiple_names <- d1 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  d2_multiple_names <- d2 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("first_name", "last_name", "birth_year", 
+                      "titles", "party_membership_abbv", 
+                      "nominating_party_abbv", "residence_name", 
+                      "occupation", 
+                      "region_name")
+  
+  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
+                 titles = 0.5, 
+                 party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
+                 residence_name = 0.5, occupation = 0.5, 
+                 region_name = 1)
+  
+  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
+                 titles = -0.25, 
+                 party_membership_abbv = 0, nominating_party_abbv = 0, 
+                 residence_name = -0.25, occupation = 0, 
+                 region_name = -0.25)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
+                            comparators = list(
+                              birth_year = cmp_within_1(),
+                              occupation = cmp_jaccard(), 
+                              titles = cmp_jaccard(), 
+                              residence_name = cmp_jaccard(),
+                              last_name = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", 
+                                            threshold = 6)
+  
+  linked_mn <- link(selected_pairs_greedy_mn, selection = "greedy") %>% 
+    left_join(., scores_mn %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  # Link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
+                           birth_year = cmp_within_1(),
                            occupation = cmp_jaccard(), 
                            titles = cmp_jaccard(), 
                            residence_name = cmp_jaccard()
-                           # last_name = cmp_last_names()
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "titles", "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation", 
-                                "region_name"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                titles = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5, 
-                                region_name = 1),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                titles = -0.25, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.25, occupation = 0, 
-                                region_name = -0.25), 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
                                          threshold = 6)
   
-  link(selected_pairs_greedy, selection = "greedy") %>% 
+  linked_others <- link(selected_pairs_greedy, selection = "greedy") %>% 
     left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  bind_rows(linked_mn, linked_others)
 }
 
-match_mr_psp_panel <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
+match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("first_name", "last_name")){
+  browser()
   d1 <- d1 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
     mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "titles", "party_membership_abbv", 
-                                       "nominating_party_abbv", "residence_name", "occupation", 
-                                       "region_name"), 
+  d1_multiple_names <- d1 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  d2_multiple_names <- d2 %>% 
+    filter(last_name %in% multiple_last_names & sex == "female")
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("first_name", "last_name", "birth_year", 
+                      "titles", "party_membership_abbv", 
+                      "nominating_party_abbv", "residence_name", "occupation", 
+                      "region_name")
+  
+  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
+         titles = 0.5, 
+         party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
+         residence_name = 0.5, occupation = 0.5, 
+         region_name = 1)
+  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
+         titles = -0.25, 
+         party_membership_abbv = 0, nominating_party_abbv = 0, 
+         residence_name = -0.25, occupation = 0, 
+         region_name = -0.25)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
+                            comparators = list(
+                              birth_year = cmp_within_1(),
+                              occupation = cmp_jaccard(), 
+                              titles = cmp_jaccard(), 
+                              residence_name = cmp_jaccard(),
+                              last_name = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", 
+                                            threshold = 6.25)
+  
+  linked_mn <- link(selected_pairs_greedy_mn, selection = "greedy") %>% 
+    left_join(., scores_mn %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  # Link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
+                           birth_year = cmp_within_1(),
                            occupation = cmp_jaccard(), 
                            titles = cmp_jaccard(), 
                            residence_name = cmp_jaccard()
-                           # last_name = cmp_last_names()
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "titles", "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation", 
-                                "region_name"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                titles = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5, 
-                                region_name = 1),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                titles = -0.25, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.25, occupation = 0, 
-                                region_name = -0.25), 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
                                          threshold = 6.25)
   
-  link(selected_pairs_greedy, selection = "greedy") %>% 
+  linked_others <- link(selected_pairs_greedy, selection = "greedy") %>% 
     left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  bind_rows(linked_mn, linked_others)
 }
 
 match_psp_sen_panel <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
@@ -854,51 +1069,57 @@ insert_nonconsecutive <- function(pivot_table, noncons, source, target){
 
 rename_variables <- function(df){
   vars_list <- c(
+    election_date = "DATUMVOLEB",
+    candidate_name = "JMENO",
+    candidate_surname = "PRIJMENI",
+    candidate_age = "VEK",
+    candidate_birthyear = "ROK_NAROZENI",
+    candidate_gender = "SEX",
+    candidate_title_before = "TITULPRED",
+    candidate_title_after = "TITULZA",
+    candidate_title_both = "TITULY",
+    candidate_education = "TITUL_KATEGORIE",
+    candidate_occupation = "POVOLANI",
+    candidate_place_name = "BYDLISTEN",
+    candidate_place_code = "BYDLISTEK",
+    candidate_ranking = "PORCISLO",
+    candidate_partymem_code = "PSTRANA",
+    candidate_partynom_code = "NSTRANA",
+    candidate_partyrun_code = "KSTRANA",
+    candidate_partynom_name = "ZKRATKAN8",
+    candidate_partymem_name = "ZKRATKAP8",
+    candidate_partyrun_name = "ZKRATKAK8",
+    candidate_validity = "PLATNOST",
+    candidate_voteN = "POCHLASU",
+    candidate_voteP = "POCPROCVSE",
+    candidate_voteP = "POCPROC",
+    candidate_seat = "MANDAT",
+    candidate_ranking_seat = "PORADIMAND",
+    candidate_ranking_subs = "PORADINAHR",
+    candidate_citizenship = "STATOBCAN",
+    candidate_voteN_SR1 = "HLASY_K1",
+    candidate_voteN_SR2 = "HLASY_K2",
+    candidate_voteP_SR1 = "URIZ_PR_K1",
+    candidate_voteP_SR2 = "URIZ_PR_K2",
+    candidate_partyrun_fullname = "NAZEV_STRK",
+    candidate_partyrun_fullname = "NAZEV_STRV",
+    candidate_partyrun_fullname = "NAZEVVS",
+    candidate_partyrun_fullname = "NAZEVCELK",
+    candidate_partyrun_fullname = "NAZEV_VS",
+    
+    party_rank = "POR_STR_HL",
+    
     electoral_region = "VOLKRAJ",
     region_name = "KRAJ_NAZEV",
-    electoral_party_name = "NAZEV_STRK",
-    electoral_party_name = "NAZEV_STRV",
-    electoral_party_name = "NAZEVVS",
-    electoral_party_name = "NAZEVCELK",
-    electoral_party_name = "NAZEV_VS",
-    list_no = "PORCISLO",
-    first_name = "JMENO",
-    last_name = "PRIJMENI",
-    title_before_name = "TITULPRED",
-    title_after_name = "TITULZA",
-    titles = "TITULY",
-    edu_cat = "TITUL_KATEGORIE",
-    age = "VEK",
-    occupation = "POVOLANI",
-    residence_name = "BYDLISTEN",
-    residence_code = "BYDLISTEK",
-    party_membership = "PSTRANA",
-    nominating_party = "NSTRANA",
-    electoral_party = "KSTRANA",
-    invalid_candidacy = "PLATNOST",
-    pref_votes_abs = "POCHLASU",
-    pref_votes_pct = "POCPROCVSE",
-    pref_votes_pct = "POCPROC",
-    nominating_party_abbv = "ZKRATKAN8",
-    party_membership_abbv = "ZKRATKAP8",
-    birth_year = "ROK_NAROZENI",
-    sex = "SEX",
-    mandate = "MANDAT",
+    
     region_code = "KRZAST",
-    election_date = "DATUMVOLEB",
     municipality_id = "KODZASTUP", 
     municipality_name = "KODZASTUP_NAZEV",
-    electoral_district_no = "COBVODU",
     municipality_type = "TYPZASTUP",
-    party_no = "POR_STR_HL",
-    citizenship = "STATOBCAN", 
-    senate_district = "OBVOD",
-    senate_candidate_no = "CKAND", 
-    votes_abs_round1 = "HLASY_K1",
-    votes_abs_round2 = "HLASY_K2",
-    votes_pct_round1 = "URIZ_PR_K1",
-    votes_pct_round2 = "URIZ_PR_K2"
+    electoral_district_no = "COBVODU",
     
+    senate_district = "OBVOD",
+    senate_candidate_no = "CKAND"
   )
   
   rename(df, any_of(vars_list))
