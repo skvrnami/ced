@@ -461,85 +461,75 @@ cmp_last_names <- function(){
   }
 }
 
-match_data <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
-  d1 <- d1 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
-  d2 <- d2 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
-  
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "title_before_name", "title_after_name", 
-                                       "party_membership_abbv", 
-                                       "nominating_party_abbv", 
-                                       "residence_name", "occupation"), 
-                         comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard()
-                           # PRIJMENI = cmp_last_names()
-                           # TODO: stejný nebo větší titul
-                         ))
-  
-  scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "title_before_name", "title_after_name", 
-                                "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                title_before_name = 0.5, title_after_name = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                title_before_name = -0.5, title_after_name = -0.5, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.5, occupation = 0), 
-                         wna = 0)
-  
-  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
-  
-  link(selected_pairs_greedy, selection = "greedy")
+cmp_regions <- function(){
+  NOVE_KRAJE <- c(
+    "Hlavní město Praha", "Plzeňský kraj", "Středočeský kraj", 
+    "Pardubický kraj", "Jihočeský kraj", "Liberecký kraj", 
+    "Kraj Vysočina", "Královéhradecký kraj",
+    "Ústecký kraj", "Jihomoravský kraj",   
+    "Karlovarský kraj", "Zlínský kraj", 
+    "Moravskoslezský kraj", "Olomoucký kraj")       
+  STARE_KRAJE <- c(
+    "Východočeský kraj", "Západočeský kraj", "Severočeský kraj", "Severomoravský kraj" 
+  )
+  function(x, y){
+    if(!x %in% NOVE_KRAJE & y %in% NOVE_KRAJE){
+      
+    }else{
+      x == y
+    }
+  }
 }
 
-match_reg_data <- function(d1, d2, multiple_last_names, 
-                           blocking_vars = c("first_name", "last_name", "region_code")){
+match_data <- function(d1, d2, multiple_last_names, 
+                       blocking_vars = c("candidate_name", "candidate_surname")){
   d1 <- d1 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
+  
+  d1 <- d1 %>% 
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
   
   d1_multiple_names <- d1 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(
+      candidate_surname %in% multiple_last_names# & sex == "female"
+           )
   d2_multiple_names <- d2 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names 
+           # & sex == "female"
+           )
   
   d1_no_change <- d1 %>% 
     filter(!row_id %in% d1_multiple_names$row_id)
   d2_no_change <- d2 %>% 
     filter(!row_id %in% d2_multiple_names$row_id)
   
-  comparing_vars <- c("first_name", "last_name", "birth_year", 
-                      "title_before_name", "title_after_name", 
-                      "party_membership_abbv", 
-                      "nominating_party_abbv", 
-                      "residence_name", "occupation")
-  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
-         title_before_name = 0.5, title_after_name = 0.5, 
-         party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-         residence_name = 0.5, occupation = 0.5)
-  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
-         title_before_name = -0.5, title_after_name = -0.5, 
-         party_membership_abbv = 0, nominating_party_abbv = 0, 
-         residence_name = -0.5, occupation = 0)
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_before", "candidate_title_after", 
+                      "candidate_partymem_code", 
+                      "candidate_partynom_code", 
+                      "candidate_place_name", "candidate_occupation")
+  w1_scores <-c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                candidate_title_before = 0.5, candidate_title_after = 0.5, 
+                candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+                candidate_place_name = 0.5, candidate_occupation = 0.5)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_before = -0.5, candidate_title_after = -0.5, 
+                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
+                 candidate_place_name = -0.5, candidate_occupation = 0)
   
   # Link women with multiple names
-  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
   
   pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
   pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars,
                             comparators = list(
-                              birth_year = cmp_within_1(),
-                              occupation = cmp_jaccard(),
-                              last_name = cmp_last_names()
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
                             ))
   
   scores_mn <- score_simple(pairs_mn, "score", 
@@ -556,8 +546,84 @@ match_reg_data <- function(d1, d2, multiple_last_names,
   pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
   pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  
+  linked_no_change <- link(selected_pairs_greedy, selection = "greedy")
+  bind_rows(mn_linked, linked_no_change)
+}
+
+match_reg_data <- function(d1, d2, multiple_last_names, 
+                           blocking_vars = c("candidate_name", "candidate_surname", "region_code")){
+  d1 <- d1 %>% 
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
+  
+  d1_multiple_names <- d1 %>% 
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
+  d2_multiple_names <- d2 %>% 
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_before", "candidate_title_after", 
+                      "candidate_partymem_code", 
+                      "candidate_partynom_code", 
+                      "candidate_place_name", "candidate_occupation")
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+         candidate_title_before = 0.5, candidate_title_after = 0.5, 
+         candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+         candidate_place_name = 0.5, candidate_occupation = 0.5)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+         candidate_title_before = -0.5, candidate_title_after = -0.5, 
+         candidate_partymem_code = 0, candidate_partynom_code = 0, 
+         candidate_place_name = -0.5, candidate_occupation = 0)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars,
+                            comparators = list(
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", threshold = 6)
+  
+  mn_linked <- link(selected_pairs_greedy_mn, selection = "greedy")
+  
+  # link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
+                         comparators = list(
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -573,47 +639,51 @@ match_reg_data <- function(d1, d2, multiple_last_names,
 }
 
 match_psp_data <- function(d1, d2, multiple_last_names, 
-                           blocking_vars = c("first_name", "last_name")){
+                           blocking_vars = c("candidate_name", "candidate_surname")){
   d1 <- d1 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
   
   d1_multiple_names <- d1 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   d2_multiple_names <- d2 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   
   d1_no_change <- d1 %>% 
     filter(!row_id %in% d1_multiple_names$row_id)
   d2_no_change <- d2 %>% 
     filter(!row_id %in% d2_multiple_names$row_id)
   
-  comparing_vars <- c("first_name", "last_name", "birth_year", 
-                      "title_before_name", "title_after_name", 
-                      "party_membership_abbv", "nominating_party_abbv", 
-                      "residence_name", "occupation", 
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_before", "candidate_title_after", 
+                      "candidate_partymem_code", "candidate_partynom_name", 
+                      "candidate_place_name", "candidate_occupation", 
                       "region_name")
-  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
-                 title_before_name = 0.5, title_after_name = 0.5, 
-                 party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                 residence_name = 0.5, occupation = 0.5, 
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                 candidate_title_before = 0.5, candidate_title_after = 0.5, 
+                 candidate_partymem_code = 0.5, candidate_partynom_name = 0.5, 
+                 candidate_place_name = 0.5, candidate_occupation = 0.5, 
                  region_name = 0.5)
-  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
-                 title_before_name = -0.5, title_after_name = -0.5, 
-                 party_membership_abbv = 0, nominating_party_abbv = 0, 
-                 residence_name = -0.5, occupation = 0, 
-                 region_name = 0)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_before = -0.5, candidate_title_after = -0.5, 
+                 candidate_partymem_code = 0, candidate_partynom_name = 0, 
+                 candidate_place_name = -0.5, candidate_occupation = 0, 
+                 region_name = -0.25)
   
   # Link women with multiple names
-  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
   
   pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
   pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars,
                             comparators = list(
-                              birth_year = cmp_within_1(),
-                              occupation = cmp_jaccard(),
-                              last_name = cmp_last_names()
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
                             ))
   
   scores_mn <- score_simple(pairs_mn, "score", 
@@ -622,7 +692,7 @@ match_psp_data <- function(d1, d2, multiple_last_names,
                             w0 = w0_scores, 
                             wna = 0)
   
-  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", threshold = 6)
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", threshold = 6.25)
   
   mn_linked <- link(selected_pairs_greedy_mn, selection = "greedy")
   
@@ -630,8 +700,8 @@ match_psp_data <- function(d1, d2, multiple_last_names,
   pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
   pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -640,57 +710,63 @@ match_psp_data <- function(d1, d2, multiple_last_names,
                          w0 = w0_scores, 
                          wna = 0)
   
-  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6.25)
   
   linked_no_change <- link(selected_pairs_greedy, selection = "greedy")
   bind_rows(mn_linked, linked_no_change)
 }
 
 match_mun_data <- function(d1, d2, multiple_last_names, 
-                           blocking_vars = c("first_name", "last_name", "municipality_id")){
+                           blocking_vars = c("candidate_name", "candidate_surname", "municipality_id")){
   d1 <- d1 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   
   d1_multiple_names <- d1 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   d2_multiple_names <- d2 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   
   d1_no_change <- d1 %>% 
     filter(!row_id %in% d1_multiple_names$row_id)
   d2_no_change <- d2 %>% 
     filter(!row_id %in% d2_multiple_names$row_id)
   
-  comparing_vars <- c("first_name", "last_name", "birth_year", 
-                      "titles", "party_membership_abbv", 
-                      "nominating_party_abbv", "residence_name", 
-                      "occupation")
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_both", "candidate_partymem_code", 
+                      "candidate_partynom_code", "candidate_place_name", 
+                      "candidate_occupation")
   
-  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
-                 titles = 0.5, 
-                 party_membership_abbv = 0.5, 
-                 nominating_party_abbv = 0.5, 
-                 residence_name = 0.5, occupation = 0.5)
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                 candidate_title_both = 0.5, 
+                 candidate_partymem_code = 0.5, 
+                 candidate_partynom_code = 0.5, 
+                 candidate_place_name = 0.5, 
+                 candidate_occupation = 0.5)
   
-  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
-                 titles = -0.25, 
-                 party_membership_abbv = 0, 
-                 nominating_party_abbv = 0, 
-                 residence_name = -0.25, occupation = 0)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_both = -0.25, 
+                 candidate_partymem_code = 0, 
+                 candidate_partynom_code = 0, 
+                 candidate_place_name = -0.5, 
+                 candidate_occupation = 0)
   
   # Link women with multiple names
-  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
   
   pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
   pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
                             comparators = list(
-                              birth_year = cmp_within_1(),
-                              occupation = cmp_jaccard(), 
-                              titles = cmp_jaccard(), 
-                              residence_name = cmp_jaccard(),
-                              last_name = cmp_last_names()
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(), 
+                              candidate_title_both = cmp_jaccard(0.5), 
+                              candidate_place_name = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
                             ))
   
   scores_mn <- score_simple(pairs_mn, "score", 
@@ -708,10 +784,10 @@ match_mun_data <- function(d1, d2, multiple_last_names,
   pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
   pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard(), 
-                           titles = cmp_jaccard(), 
-                           residence_name = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard(), 
+                           candidate_title_both = cmp_jaccard(0.5), 
+                           candidate_place_name = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -728,40 +804,114 @@ match_mun_data <- function(d1, d2, multiple_last_names,
   bind_rows(linked_mn, linked_others)
 }
 
-match_sen_data <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
+match_sen_data <- function(d1, d2, multiple_last_names, 
+                           blocking_vars = c("candidate_name", "candidate_surname")){
   d1 <- d1 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(title_before_name, title_after_name), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
+  
+  d1_multiple_names <- d1 %>% 
+    filter(
+      candidate_surname %in% multiple_last_names# & sex == "female"
+    )
+  d2_multiple_names <- d2 %>% 
+    filter(candidate_surname %in% multiple_last_names 
+           # & sex == "female"
+    )
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_before", "candidate_title_after", 
+                      "candidate_partymem_code", 
+                      "candidate_partynom_code", 
+                      "candidate_place_name", "candidate_occupation", 
+                      "senate_district")
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                 candidate_title_before = 0.5, candidate_title_after = 0.5, 
+                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+                 candidate_place_name = 0.5, candidate_occupation = 0.5, 
+                 senate_district = 2)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_before = -0.5, candidate_title_after = -0.5, 
+                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
+                 candidate_place_name = -0.5, candidate_occupation = 0, 
+                 senate_district = 0)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars,
+                            comparators = list(
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", threshold = 6)
+  
+  mn_linked <- link(selected_pairs_greedy_mn, selection = "greedy")
+  
+  # link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
+                         comparators = list(
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  
+  linked_no_change <- link(selected_pairs_greedy, selection = "greedy")
+  bind_rows(mn_linked, linked_no_change)
+  
+  ## Original
   
   pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "title_before_name", "title_after_name", 
-                                       "party_membership_abbv", 
-                                       "nominating_party_abbv", 
-                                       "residence_name", "occupation", 
+  pairs <- compare_pairs(pairs, on = c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                                       "candidate_title_before", "candidate_title_after", 
+                                       "candidate_partymem_code", 
+                                       "candidate_partynom_code", 
+                                       "candidate_place_name", "candidate_occupation", 
                                        "senate_district"), 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard()
                            # PRIJMENI = cmp_last_names()
                            # TODO: stejný nebo větší titul
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "title_before_name", "title_after_name", "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation", 
+                         on = c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                                "candidate_title_before", "candidate_title_after", "candidate_partymem_code", 
+                                "candidate_partynom_code", "candidate_place_name", "candidate_occupation", 
                                 "senate_district"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                title_before_name = 0.5, title_after_name = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5, 
+                         w1 = c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                                candidate_title_before = 0.5, candidate_title_after = 0.5, 
+                                candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+                                candidate_place_name = 0.5, candidate_occupation = 0.5, 
                                 senate_district = 2),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                title_before_name = -0.5, title_after_name = -0.5, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.5, occupation = 0, 
+                         w0 = c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                                candidate_title_before = -0.5, candidate_title_after = -0.5, 
+                                candidate_partymem_code = 0, candidate_partynom_code = 0, 
+                                candidate_place_name = -0.5, candidate_occupation = 0, 
                                 senate_district = 0), 
                          wna = 0)
   
@@ -771,47 +921,51 @@ match_sen_data <- function(d1, d2, blocking_vars = c("first_name", "last_name"))
 }
 
 match_mun_panel_data <- function(d1, d2, multiple_last_names, 
-                                 blocking_vars = c("first_name", "last_name", "municipality_id")){
+                                 blocking_vars = c("candidate_name", "candidate_surname", "municipality_id")){
   d1 <- d1 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   
   d1_multiple_names <- d1 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   d2_multiple_names <- d2 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   
   d1_no_change <- d1 %>% 
     filter(!row_id %in% d1_multiple_names$row_id)
   d2_no_change <- d2 %>% 
     filter(!row_id %in% d2_multiple_names$row_id)
   
-  comparing_vars <- c("first_name", "last_name", "birth_year", 
-                      "titles", "party_membership_abbv", 
-                      "nominating_party_abbv", "residence_name", "occupation")
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_both", "candidate_partymem_code", 
+                      "candidate_partynom_code", "candidate_place_name", "candidate_occupation")
   
-  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
-                 titles = 0.5, 
-                 party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                 residence_name = 0.5, occupation = 0.5)
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                 candidate_title_both = 0.5, 
+                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+                 candidate_place_name = 0.5, candidate_occupation = 0.5)
   
-  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
-                 titles = -0.25, 
-                 party_membership_abbv = 0, nominating_party_abbv = 0, 
-                 residence_name = -0.25, occupation = 0)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_both = -0.25, 
+                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
+                 candidate_place_name = -0.25, candidate_occupation = 0)
   
   # Link women with multiple names
-  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
   
   pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
   pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
                             comparators = list(
-                              birth_year = cmp_within_1(),
-                              occupation = cmp_jaccard(), 
-                              titles = cmp_jaccard(), 
-                              residence_name = cmp_jaccard(),
-                              last_name = cmp_last_names()
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(), 
+                              candidate_title_both = cmp_jaccard(0.5), 
+                              candidate_place_name = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
                             ))
   
   scores_mn <- score_simple(pairs_mn, "score", 
@@ -830,10 +984,10 @@ match_mun_panel_data <- function(d1, d2, multiple_last_names,
   pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
   pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard(), 
-                           titles = cmp_jaccard(), 
-                           residence_name = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard(), 
+                           candidate_title_both = cmp_jaccard(0.5), 
+                           candidate_place_name = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -852,51 +1006,55 @@ match_mun_panel_data <- function(d1, d2, multiple_last_names,
 }
 
 match_mun_reg_panel <- function(d1, d2, multiple_last_names, 
-                                blocking_vars = c("first_name", "last_name", "region_name")){
+                                blocking_vars = c("candidate_name", "candidate_surname", "region_name")){
   d1 <- d1 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   
   d1_multiple_names <- d1 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   d2_multiple_names <- d2 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   
   d1_no_change <- d1 %>% 
     filter(!row_id %in% d1_multiple_names$row_id)
   d2_no_change <- d2 %>% 
     filter(!row_id %in% d2_multiple_names$row_id)
   
-  comparing_vars <- c("first_name", "last_name", "birth_year", 
-                      "titles", "party_membership_abbv", 
-                      "nominating_party_abbv", "residence_name", 
-                      "occupation", 
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_both", "candidate_partymem_code", 
+                      "candidate_partynom_code", "candidate_place_name", 
+                      "candidate_occupation", 
                       "region_name")
   
-  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
-                 titles = 0.5, 
-                 party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                 residence_name = 0.5, occupation = 0.5, 
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                 candidate_title_both = 0.5, 
+                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+                 candidate_place_name = 0.5, candidate_occupation = 0.5, 
                  region_name = 1)
   
-  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
-                 titles = -0.25, 
-                 party_membership_abbv = 0, nominating_party_abbv = 0, 
-                 residence_name = -0.25, occupation = 0, 
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_both = -0.25, 
+                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
+                 candidate_place_name = -0.25, candidate_occupation = 0, 
                  region_name = -0.25)
   
   # Link women with multiple names
-  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
   
   pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
   pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
                             comparators = list(
-                              birth_year = cmp_within_1(),
-                              occupation = cmp_jaccard(), 
-                              titles = cmp_jaccard(), 
-                              residence_name = cmp_jaccard(),
-                              last_name = cmp_last_names()
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(), 
+                              candidate_title_both = cmp_jaccard(0.5), 
+                              candidate_place_name = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
                             ))
   
   scores_mn <- score_simple(pairs_mn, "score", 
@@ -915,10 +1073,10 @@ match_mun_reg_panel <- function(d1, d2, multiple_last_names,
   pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
   pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard(), 
-                           titles = cmp_jaccard(), 
-                           residence_name = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard(), 
+                           candidate_title_both = cmp_jaccard(0.5), 
+                           candidate_place_name = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -936,50 +1094,54 @@ match_mun_reg_panel <- function(d1, d2, multiple_last_names,
   bind_rows(linked_mn, linked_others)
 }
 
-match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("first_name", "last_name")){
-  browser()
+match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("candidate_name", "candidate_surname")){
+  
   d1 <- d1 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   
   d1_multiple_names <- d1 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   d2_multiple_names <- d2 %>% 
-    filter(last_name %in% multiple_last_names & sex == "female")
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+           )
   
   d1_no_change <- d1 %>% 
     filter(!row_id %in% d1_multiple_names$row_id)
   d2_no_change <- d2 %>% 
     filter(!row_id %in% d2_multiple_names$row_id)
   
-  comparing_vars <- c("first_name", "last_name", "birth_year", 
-                      "titles", "party_membership_abbv", 
-                      "nominating_party_abbv", "residence_name", "occupation", 
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_both", "candidate_partymem_code", 
+                      "candidate_partynom_code", "candidate_place_name", "candidate_occupation", 
                       "region_name")
   
-  w1_scores <- c(first_name = 2, last_name = 2, birth_year = 2, 
-         titles = 0.5, 
-         party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-         residence_name = 0.5, occupation = 0.5, 
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+         candidate_title_both = 0.5, 
+         candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+         candidate_place_name = 0.5, candidate_occupation = 0.5, 
          region_name = 1)
-  w0_scores <- c(first_name = -5, last_name = -5, birth_year = -5,
-         titles = -0.25, 
-         party_membership_abbv = 0, nominating_party_abbv = 0, 
-         residence_name = -0.25, occupation = 0, 
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+         candidate_title_both = -0.25, 
+         candidate_partymem_code = 0, candidate_partynom_code = 0, 
+         candidate_place_name = -0.25, candidate_occupation = 0, 
          region_name = -0.25)
   
   # Link women with multiple names
-  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "last_name"]
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
   
   pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
   pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
                             comparators = list(
-                              birth_year = cmp_within_1(),
-                              occupation = cmp_jaccard(), 
-                              titles = cmp_jaccard(), 
-                              residence_name = cmp_jaccard(),
-                              last_name = cmp_last_names()
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(), 
+                              candidate_title_both = cmp_jaccard(0.5), 
+                              candidate_place_name = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
                             ))
   
   scores_mn <- score_simple(pairs_mn, "score", 
@@ -998,10 +1160,10 @@ match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("f
   pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
   pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           birth_year = cmp_within_1(),
-                           occupation = cmp_jaccard(), 
-                           titles = cmp_jaccard(), 
-                           residence_name = cmp_jaccard()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard(), 
+                           candidate_title_both = cmp_jaccard(0.5), 
+                           candidate_place_name = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -1019,42 +1181,93 @@ match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("f
   bind_rows(linked_mn, linked_others)
 }
 
-match_psp_sen_panel <- function(d1, d2, blocking_vars = c("first_name", "last_name")){
+match_psp_sen_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("candidate_name", "candidate_surname")){
   d1 <- d1 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
-    mutate(across(c(titles), ~if_else(is.na(.x), "", .x)))
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
   
-  pairs <- pair_blocking(d1, d2, blocking_vars)
-  pairs <- compare_pairs(pairs, on = c("first_name", "last_name", "birth_year", 
-                                       "titles", "party_membership_abbv", 
-                                       "nominating_party_abbv", "residence_name", "occupation"), 
+  
+  d1 <- d1 %>% 
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
+  d2 <- d2 %>% 
+    mutate(across(c(candidate_title_both), ~if_else(is.na(.x), "", .x)))
+  
+  d1_multiple_names <- d1 %>% 
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+    )
+  d2_multiple_names <- d2 %>% 
+    filter(candidate_surname %in% multiple_last_names
+           # & sex == "female"
+    )
+  
+  d1_no_change <- d1 %>% 
+    filter(!row_id %in% d1_multiple_names$row_id)
+  d2_no_change <- d2 %>% 
+    filter(!row_id %in% d2_multiple_names$row_id)
+  
+  comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
+                      "candidate_title_both", "candidate_partymem_code", 
+                      "candidate_partynom_code", "candidate_place_name", "candidate_occupation")
+  
+  w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
+                 candidate_title_both = 0.5, 
+                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
+                 candidate_place_name = 0.5, candidate_occupation = 0.5)
+  w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
+                 candidate_title_both = -0.25, 
+                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
+                 candidate_place_name = -0.25, candidate_occupation = 0)
+  
+  # Link women with multiple names
+  blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
+  
+  pairs_mn <- pair_blocking(d1_multiple_names, d2_multiple_names, blocking_vars_wo_last_name)
+  pairs_mn <- compare_pairs(pairs_mn, on = comparing_vars, 
+                            comparators = list(
+                              candidate_birthyear = cmp_within_1(),
+                              candidate_occupation = cmp_jaccard(), 
+                              candidate_title_both = cmp_jaccard(0.5), 
+                              candidate_place_name = cmp_jaccard(),
+                              candidate_surname = cmp_last_names()
+                            ))
+  
+  scores_mn <- score_simple(pairs_mn, "score", 
+                            on = comparing_vars, 
+                            w1 = w1_scores,
+                            w0 = w0_scores, 
+                            wna = 0)
+  
+  selected_pairs_greedy_mn <- select_greedy(scores_mn, variable = "greedy", score = "score", 
+                                            threshold = 6.25)
+  
+  linked_mn <- link(selected_pairs_greedy_mn, selection = "greedy") %>% 
+    left_join(., scores_mn %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  # Link the rest
+  pairs <- pair_blocking(d1_no_change, d2_no_change, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
                          comparators = list(
-                           occupation = cmp_jaccard(), 
-                           titles = cmp_jaccard(), 
-                           residence_name = cmp_jaccard()
-                           # last_name = cmp_last_names()
+                           candidate_birthyear = cmp_within_1(),
+                           candidate_occupation = cmp_jaccard(), 
+                           candidate_title_both = cmp_jaccard(0.5), 
+                           candidate_place_name = cmp_jaccard()
                          ))
   
   scores <- score_simple(pairs, "score", 
-                         on = c("first_name", "last_name", "birth_year", 
-                                "titles", "party_membership_abbv", 
-                                "nominating_party_abbv", "residence_name", "occupation"), 
-                         w1 = c(first_name = 2, last_name = 2, birth_year = 2, 
-                                titles = 0.5, 
-                                party_membership_abbv = 0.5, nominating_party_abbv = 0.5, 
-                                residence_name = 0.5, occupation = 0.5),
-                         w0 = c(first_name = -5, last_name = -5, birth_year = -5,
-                                titles = -0.25, 
-                                party_membership_abbv = 0, nominating_party_abbv = 0, 
-                                residence_name = -0.25, occupation = 0), 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", 
                                          threshold = 6.25)
   
-  link(selected_pairs_greedy, selection = "greedy") %>% 
+  linked_others <- link(selected_pairs_greedy, selection = "greedy") %>% 
     left_join(., scores %>% select(.x, .y, score), by = c(".x", ".y"))
+  
+  bind_rows(linked_mn, linked_others)
 }
 
 insert_nonconsecutive <- function(pivot_table, noncons, source, target){
@@ -1123,4 +1336,76 @@ rename_variables <- function(df){
   )
   
   rename(df, any_of(vars_list))
+}
+
+# Party level variables -----------------------------------
+parse_ep_hlasy_strana <- function(nodes){
+  purrr::map_df(nodes, function(x) {
+    data.frame(
+      candidate_partyrun_code = as.numeric(html_attr(x, "estrana")), 
+      party_voteN = as.numeric(html_attr(x, "hlasy")), 
+      party_voteP = as.numeric(html_attr(x, "proc_hlasu"))
+    )
+  })
+}
+
+parse_kz_hlasy_strana <- function(nodes){
+  hodnoty_strany <- nodes %>% 
+    html_nodes("hodnoty_strana")
+  
+  kstrana <- purrr::map_int(nodes, ~as.numeric(html_attr(.x, "kstrana")))
+  
+  purrr::map_df(hodnoty_strany, function(x) {
+    data.frame(
+      party_voteN = as.numeric(html_attr(x, "hlasy")), 
+      party_voteP = as.numeric(html_attr(x, "proc_hlasu"))
+    )
+  }) %>% 
+    mutate(candidate_partyrun_code = kstrana)
+}
+
+parse_kz_results <- function(html){
+  kraje <- html %>% 
+    html_nodes("krzast")
+  
+  purrr::map_df(kraje, function(x) {
+    kraj <- as.numeric(html_attr(x, "cis_krzast"))
+    x %>% 
+      html_nodes("strana") %>% 
+      parse_kz_hlasy_strana() %>% 
+      mutate(region_code = kraj)
+  })
+}
+
+parse_ps_hlasy_strana <- function(nodes){
+  hodnoty_strany <- nodes %>% 
+    html_nodes("hodnoty_strana")
+  
+  kstrana <- purrr::map_int(nodes, ~as.numeric(html_attr(.x, "kstrana")))
+  
+  purrr::map_df(hodnoty_strany, function(x) {
+    data.frame(
+      party_voteN = as.numeric(html_attr(x, "hlasy")), 
+      party_voteP = as.numeric(html_attr(x, "proc_hlasu"))
+    )
+  }) %>% 
+    mutate(candidate_partyrun_code = kstrana)
+}
+
+parse_ps_results <- function(html){
+  kraje <- html %>% 
+    html_nodes("kraj")
+  
+  purrr::map_df(kraje, function(x) {
+    kraj <- as.numeric(html_attr(x, "cis_kraj"))
+    x %>% 
+      html_nodes("strana") %>% 
+      parse_ps_hlasy_strana() %>% 
+      mutate(electoral_region = kraj)
+  })
+}
+
+remove_whitespace <- function(x){
+  d <- utf8ToInt(x)
+  intToUtf8(d[which(d != 160)])
 }

@@ -47,3 +47,4 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+validation_data/clea_lc_20240419_r/*.RData
