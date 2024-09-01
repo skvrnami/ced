@@ -1409,3 +1409,48 @@ remove_whitespace <- function(x){
   d <- utf8ToInt(x)
   intToUtf8(d[which(d != 160)])
 }
+
+summarise_election <- function(df){
+  df %>% 
+    group_by(election_year) %>% 
+    summarise(
+      n_candidates = n(), 
+      n_female_candidates = sum(candidate_gender == "female"), 
+      n_elected = sum(candidate_seat == 1), 
+      n_female_elected = sum(candidate_gender == "female" & 
+                               candidate_seat == 1)
+    )
+}
+
+# Validation functions ------------------------------------
+find_new_candidates <- function(df, t1, t){
+  df %>% 
+    filter(election %in% c(t, t1)) %>% 
+    group_by(person_id) %>% 
+    mutate(new_candidate = n() == 1 & election == t) %>% 
+    ungroup %>% 
+    select(new_candidate, everything()) %>% 
+    filter(election == t)
+}
+
+calculate_rankings <- function(df){
+  df %>% 
+    mutate(
+      candidate_ranking_final = case_when(
+        candidate_ranking_seat != 0 ~ candidate_ranking_seat,
+        candidate_ranking_subs != 0 ~ candidate_ranking_subs, 
+        TRUE ~ candidate_ranking
+      )
+    ) %>% 
+    group_by(electoral_region) %>% 
+    mutate(district_magnitude = sum(candidate_seat)) %>% 
+    ungroup() %>% 
+    # filter(candidate_ranking_final <= district_magnitude) %>% 
+    mutate(r = (candidate_ranking_final - 1) / (district_magnitude - 1)) %>% 
+    mutate(rw = 1 / (1 + exp(25 * (r - (party_voteP / 100))))) %>% 
+    group_by(candidate_partyrun_fullname, electoral_region) %>% 
+    mutate(w = rw / sum(rw)) %>% 
+    select(r, rw, w, candidate_ranking_final, district_magnitude, everything())
+}
+
+

@@ -1554,7 +1554,12 @@ mun_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(OKRES, OSTRANA, POHLAVI, DATNAR, 
                 POCHL_PRES)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(
+        candidate_voteN = if_else(is.na(candidate_voteN), 0, candidate_voteN), 
+        candidate_voteP = if_else(is.na(candidate_voteP), 0, candidate_voteP),
+        candidate_seat = if_else(is.na(candidate_seat), 0, candidate_seat)
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
@@ -3320,7 +3325,8 @@ senate_data <- list(
         mutate(
           row_id = row_number(), 
           person_id = paste0("B", row_id)
-        )
+        ) %>% 
+        mutate(election_year = floor(election_date / 10000))
       
       sen_a_b <- match_sen_data(sen_panel_a, sen_panel_b, multiple_last_names_eligible, c("candidate_name", "candidate_surname"))
       sen_b_c <- match_sen_data(sen_panel_b, sen_panel_c, multiple_last_names_eligible, c("candidate_name", "candidate_surname"))
@@ -4509,7 +4515,7 @@ validations <- list(
   tar_target(kouba_lysek_2023_tab1, {
     mc_mun_panel %>% 
       group_by(municipality_id, election_year) %>% 
-      summarise(n_stran = max(party_no)) %>% 
+      summarise(n_stran = max(party_rank)) %>% 
       group_by(election_year) %>% 
       summarise(pct = mean(n_stran == 1) * 100)
   }), 
@@ -4602,6 +4608,76 @@ validations <- list(
   
   tar_target(clea_pref_votes, {
     NULL
+  }), 
+  
+  tar_target(sikk_koker_wcn, {
+    # 2021
+    new_candidates_2021 <- complete_panel %>% 
+      find_new_candidates(., "PSP 2017", "PSP 2021")
+    
+    w_new_candidates_2021 <- new_candidates_2021 %>% 
+      calculate_rankings()
+    
+    wcn_2021 <- w_new_candidates_2021 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn)
+    
+    # 2017
+    new_candidates_2017 <- complete_panel %>% 
+      find_new_candidates(., "PSP 2013", "PSP 2017")
+    
+    w_new_candidates_2017 <- new_candidates_2017 %>% 
+      calculate_rankings()
+    
+    wcn_2017 <- w_new_candidates_2017 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn)
+    
+    # 2013
+    new_candidates_2013 <- complete_panel %>% 
+      find_new_candidates(., "PSP 2010", "PSP 2013")
+    
+    w_new_candidates_2013 <- new_candidates_2013 %>% 
+      calculate_rankings()
+    
+    wcn_2013 <- w_new_candidates_2013 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn)
+    
+    # 2010
+    new_candidates_2010 <- complete_panel %>% 
+      find_new_candidates(., "PSP 2006", "PSP 2010")
+    
+    w_new_candidates_2010 <- new_candidates_2010 %>% 
+      calculate_rankings()
+    
+    wcn_2010 <- w_new_candidates_2010 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn)
+    
+    # 2006
+    new_candidates_2006 <- complete_panel %>% 
+      find_new_candidates(., "PSP 2002", "PSP 2006")
+    
+    w_new_candidates_2006 <- new_candidates_2006 %>% 
+      calculate_rankings()
+    
+    wcn_2006 <- w_new_candidates_2006 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn)
+    
+    bind_rows(
+      wcn_2006 %>% mutate(year = 2006),
+      wcn_2010 %>% mutate(year = 2010),
+      wcn_2013 %>% mutate(year = 2013),
+      wcn_2017 %>% mutate(year = 2017),
+      wcn_2021 %>% mutate(year = 2021)
+    )
   })
 )
 
@@ -4609,31 +4685,33 @@ validations <- list(
 summary_stats <- list(
   tar_target(n_candidates, {
     bind_rows(
-      psp_panel %>% count(election_year) %>% 
-        mutate(election_year = paste0("PS ", election_year)),
-      reg_panel %>% count(election_year) %>% 
-        mutate(election_year = paste0("Reg. ", election_year)),
-      ep_panel %>% count(election_year) %>% 
-        mutate(election_year = paste0("EP ", election_year)), 
+      psp_panel %>% 
+        mutate(election_year = paste0("PS ", election_year)) %>% 
+        summarise_election(),
+      reg_panel %>% 
+        mutate(election_year = paste0("Reg. ", election_year)) %>% 
+        summarise_election(),
+      ep_panel %>% 
+        mutate(election_year = paste0("EP ", election_year)) %>% 
+        summarise_election(), 
       m_panel %>% 
-        count(election_year) %>% 
-        mutate(election_year = paste0("Municipal ", election_year)), 
+        mutate(election_year = paste0("Municipal ", election_year)) %>% 
+        summarise_election(), 
       mc_panel %>% 
-        count(election_year) %>% 
-        mutate(election_year = paste0("City districts ", election_year)),
+        mutate(election_year = paste0("City districts ", election_year)) %>% 
+        summarise_election,
       sen_panel %>% 
-        mutate(election = case_when(
+        mutate(election_year = case_when(
           election_date %in% c(19961116, 19981114, 
                                20001112, 20021025,
                                20041105, 20061020, 
                                20081017, 20101015,
                                20121012, 20141010, 
-                               20181005, 20201002,
-                               20220923) ~ paste0("Senate Election ", election_year), 
+                               20161007, 20181005, 
+                               20201002, 20220923) ~ paste0("Senate Election ", election_year), 
           TRUE ~ paste0("Senate By-election ", election_year)
         )) %>% 
-        count(election_year, election) %>% 
-        select(election_year = election, n)
+        summarise_election()
     )
   }),
   
@@ -4642,7 +4720,10 @@ summary_stats <- list(
   }), 
   
   tar_target(n_candidates_tex, {
-    knitr::kable(n_candidates, col.names = c("Election", "N of candidates"), 
+    knitr::kable(n_candidates, col.names = c("Election", "N of candidates", 
+                                             "Female candidates", 
+                                             "Elected candidates", 
+                                             "Elected female candidates"), 
                  format = "latex") %>% 
       writeLines(., "figs/n_candidates.tex")
   })
