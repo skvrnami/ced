@@ -3,6 +3,8 @@
 #install.packages("dplyr")
 #install.packages("stringr")
 #install.packages("haven")
+#install.packages("lubridate")
+
 
 # Load necessary libraries
 library(readxl)
@@ -10,6 +12,7 @@ library(writexl)
 library(dplyr)
 library(stringr)
 library(haven)
+library(lubridate)
 
 # Set working directory
 setwd("/Users/vtitl/Documents/GitHub/ced/donation_data/")
@@ -24,6 +27,7 @@ dir.create("primary_data", showWarnings = FALSE)
 dir.create("primary_data/oofppm", showWarnings = FALSE)
 dir.create("data", showWarnings = FALSE)
 dir.create("intermediate_data", showWarnings = FALSE)
+dir.create("cleaned_data", showWarnings = FALSE)
 
 # Loop through political parties and years to download and process files
 for (p in polparty) {
