@@ -1,11 +1,15 @@
 #install.packages("readxl")
 #install.packages("writexl")
 #install.packages("dplyr")
+#install.packages("stringr")
+#install.packages("haven")
 
 # Load necessary libraries
 library(readxl)
 library(writexl)
 library(dplyr)
+library(stringr)
+library(haven)
 
 # Set working directory
 setwd("/Users/vtitl/Documents/GitHub/ced/donation_data/")
