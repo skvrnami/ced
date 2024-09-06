@@ -53,23 +53,46 @@ for (d in donationform) {
   data <- data %>%
     filter(!surname %in% c("anonym", "test", "Test", "stojkov"))
   
-  # Replace academic titles in firstname and surname using tituly_bn and tituly_an
+  # Replace academic degrees in firstname and surname
   for (t in tituly_bn) {
-    data <- data %>%
-      mutate(acadegree_bn = if_else(str_detect(firstname, fixed(t)), t, acadegree_bn),
-             acadegree_bn = if_else(str_detect(surname, fixed(t)), t, acadegree_bn))
+    data$acadegree_bn[grepl(t, data$firstname)] <- t
+    data$acadegree_bn[grepl(t, data$surname)] <- t
   }
   
   for (t in tituly_an) {
-    data <- data %>%
-      mutate(acadegree_an = if_else(str_detect(firstname, fixed(t)), t, acadegree_an),
-             acadegree_an = if_else(str_detect(surname, fixed(t)), t, acadegree_an))
+    data$acadegree_an[grepl(t, data$firstname)] <- t
+    data$acadegree_an[grepl(t, data$surname)] <- t
   }
   
   # Clean up firstname by removing academic titles
   data <- data %>%
-    mutate(firstname = str_remove_all(firstname, " Bc.| MUDr.| JUDr.| PhDr.|Ing.arch.|Ing. arch.|Ing.Arch.|Ing. Arch.|, Ing.| Ing.|.Ing.| Mgr.|Ing.arch.|Ing.PhD.| PH.D.| PharmDr.| PhDr. Ph.D.| Ph.D.| Dr.| Mgr.et Mgr.| Mgr-| doc. CSc| dipl.um.| PHDr.| RNDr.| doc.DDr.PdD.| Doc. JUDr. Ph.| Ing| -předseda|,, Ph.D|, Ph.D.|,,Mgr.,Ph.D|,, MBA|, Dis.|, Bc MBA|, DiS|, MBA|MBA|,, IWE|, Dis.|, MVDr.|, Di|, RNDr.Ph.D.|, Prof.MUDr.|, ThMgr.| - krajský tajem|, et,|, prof. PhDr.|, RNDr.Ph.D.|, doc. JUDr.|, PhDr., BcA.|PhD| prof| RNDr| PaedDr| doc| Doc| BcA|,Ph.D.|  Mgr|et")) %>%
+    mutate(firstname = str_remove_all(firstname, " Bc.| MUDr.| JUDr.| PhDr.|Ing.arch.|Ing. arch.|Ing.Arch.|Ing. Arch.|, Ing.| Ing.|.Ing.| Mgr.|Ing.arch.|Ing.PhD.| PH.D.| PharmDr.| PhDr. Ph.D.| Ph.D.| Dr.| Mgr.et Mgr.| Mgr-| doc. CSc| dipl.um.| PHDr.| RNDr.| doc.DDr.PdD.| Doc. JUDr. Ph.| Ing| -předseda|,, Ph.D|, Ph.D.|,,Mgr.,Ph.D|,, MBA|, Dis.|, Bc MBA|, DiS|, MBA|MBA|,, IWE|, Dis.|, MVDr.|, Di|, RNDr.Ph.D.|, Prof.MUDr.|, ThMgr.| - krajský tajem|, et,|, prof. PhDr.|, RNDr.Ph.D.|, doc. JUDr.|, PhDr., BcA.|PhD| prof| RNDr| PaedDr| doc| Doc| BcA|,Ph.D.|  Mgr")) %>%
     mutate(firstname = str_squish(firstname))  # Remove extra spaces and dots
+  
+  # Define the conditions for the first replacement
+  excluded_names <- c("Petra", "Břetislav", "Peter", "Iveta", "Jetelinová", "Kajetán", "Žaneta", "Bernadetta", "Yveta", "Aneta", "Jeanette", "Petros", "Yvette", "Elisabeth", "Betty", "Svetozar", "Jiří Metod", "Elizabet", "Petri", "Petruše", "Marketa", "Petr Felix", "Yweta", "Karel", "Kvetoslava")
+  
+  # Replace "et" in firstname if conditions are met
+  data$firstname <- ifelse(!grepl("Petr", data$firstname) & !data$firstname %in% excluded_names, gsub("et", "", data$firstname), data$firstname)
+  
+  # Other replacements in firstname
+  data$firstname <- gsub("MUDr ", "", data$firstname)
+  data$firstname <- gsub("MUDr", "", data$firstname)
+  data$firstname <- gsub("Bc ", "", data$firstname)
+  data$firstname <- gsub("Mgr", "", data$firstname)
+  data$firstname <- gsub("Ing", "", data$firstname)
+  
+  # Replacements in surname
+  data$surname <- gsub(" MUDr.", "", data$surname)
+  data$surname <- gsub(", Ph.D.", "", data$surname)
+  
+  # Replace spaces in firstname if surname matches certain values
+  data$firstname <- ifelse(data$surname %in% c("Celý", "Carbolová", "Giacintov"), gsub(" ", "", data$firstname), data$firstname)
+  
+  # Other replacements in firstname
+  data$firstname <- gsub("\\.", "", data$firstname)
+  data$firstname <- gsub(",", "", data$firstname)
+  data$firstname <- gsub(",,", "", data$firstname)
   
   # Handle common typos in firstnames
   typos <- list(
