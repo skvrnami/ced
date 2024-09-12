@@ -195,7 +195,8 @@ categorize_sex <- function(df, unique_first_names){
       grepl("á$", PRIJMENI) | grepl("ka\\b", POVOLANI) ~ "female", 
       TRUE ~ "male"
     )) %>% 
-    select(-SEX_first_name)
+    select(-SEX_first_name) %>% 
+    mutate(SEX = factor(SEX, levels = c("male", "female")))
 }
 
 categorize_by_first_name <- function(df, threshold = 0.9){
@@ -416,7 +417,8 @@ parse_ep_regkand_row <- function(x){
     MANDAT = extract_el_value_num(x, "mandat"),
     PORADIMAND = extract_el_value_num(x, "poradimand"),
     PORADINAHR = extract_el_value_num(x, "poradinahr"), 
-    POVOLANI = extract_el_value(x, "povolani")
+    POVOLANI = extract_el_value(x, "povolani"), 
+    PLATNOST = extract_el_value(x, "platnost")
   )
 }
 
@@ -1418,7 +1420,8 @@ summarise_election <- function(df){
       n_female_candidates = sum(candidate_gender == "female"), 
       n_elected = sum(candidate_seat == 1), 
       n_female_elected = sum(candidate_gender == "female" & 
-                               candidate_seat == 1)
+                               candidate_seat == 1), 
+      share_elected = round(n_elected / n_candidates * 100, 1)
     )
 }
 
@@ -1447,10 +1450,21 @@ calculate_rankings <- function(df){
     ungroup() %>% 
     # filter(candidate_ranking_final <= district_magnitude) %>% 
     mutate(r = (candidate_ranking_final - 1) / (district_magnitude - 1)) %>% 
-    mutate(rw = 1 / (1 + exp(25 * (r - (party_voteP / 100))))) %>% 
+    # mutate(rw = 1 / (1 + exp(25 * (r - (v_pct / 100))))) %>% 
+    mutate(rw = 1 / (1 + exp(25 * (r - (party_voteP / 100))))) %>%
     group_by(candidate_partyrun_fullname, electoral_region) %>% 
     mutate(w = rw / sum(rw)) %>% 
     select(r, rw, w, candidate_ranking_final, district_magnitude, everything())
 }
 
+correlate_year <- function(df, year){
+  tmp <- df %>% 
+    filter(year == {{year}}) 
+  cor(tmp$wcn_sk, tmp$wcn_cpcd)  
+}
 
+rmse_year <- function(df, year){
+  tmp <- df %>% filter(year == {{year}})
+  diff <- tmp$wcn_sk - tmp$wcn_cpcd
+  sqrt(mean(diff ^ 2))
+}
