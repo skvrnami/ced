@@ -513,15 +513,15 @@ match_data <- function(d1, d2, multiple_last_names,
                       "candidate_title_before", "candidate_title_after", 
                       "candidate_partymem_code", 
                       "candidate_partynom_code", 
-                      "candidate_place_name", "candidate_occupation")
+                      "candidate_place_code", "candidate_occupation")
   w1_scores <-c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                 candidate_title_before = 0.5, candidate_title_after = 0.5, 
                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-                candidate_place_name = 0.5, candidate_occupation = 0.5)
+                candidate_place_code = 0.5, candidate_occupation = 0.5)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_before = -0.5, candidate_title_after = -0.5, 
                  candidate_partymem_code = 0, candidate_partynom_code = 0, 
-                 candidate_place_name = -0.5, candidate_occupation = 0)
+                 candidate_place_code = -0.5, candidate_occupation = 0)
   
   # Link women with multiple names
   blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
@@ -589,15 +589,15 @@ match_reg_data <- function(d1, d2, multiple_last_names,
                       "candidate_title_before", "candidate_title_after", 
                       "candidate_partymem_code", 
                       "candidate_partynom_code", 
-                      "candidate_place_name", "candidate_occupation")
+                      "candidate_place_code", "candidate_occupation")
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
          candidate_title_before = 0.5, candidate_title_after = 0.5, 
          candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-         candidate_place_name = 0.5, candidate_occupation = 0.5)
+         candidate_place_code = 0.5, candidate_occupation = 0.5)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
          candidate_title_before = -0.5, candidate_title_after = -0.5, 
          candidate_partymem_code = 0, candidate_partynom_code = 0, 
-         candidate_place_name = -0.5, candidate_occupation = 0)
+         candidate_place_code = -0.5, candidate_occupation = 0)
   
   # Link women with multiple names
   blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
@@ -664,17 +664,17 @@ match_psp_data <- function(d1, d2, multiple_last_names,
   comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
                       "candidate_title_before", "candidate_title_after", 
                       "candidate_partymem_code", "candidate_partynom_name", 
-                      "candidate_place_name", "candidate_occupation", 
+                      "candidate_place_code", "candidate_occupation", 
                       "region_name")
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_before = 0.5, candidate_title_after = 0.5, 
                  candidate_partymem_code = 0.5, candidate_partynom_name = 0.5, 
-                 candidate_place_name = 0.5, candidate_occupation = 0.5, 
+                 candidate_place_code = 0.5, candidate_occupation = 0.5, 
                  region_name = 0.5)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_before = -0.5, candidate_title_after = -0.5, 
                  candidate_partymem_code = 0, candidate_partynom_name = 0, 
-                 candidate_place_name = -0.5, candidate_occupation = 0, 
+                 candidate_place_code = -0.5, candidate_occupation = 0, 
                  region_name = -0.25)
   
   # Link women with multiple names
@@ -741,21 +741,21 @@ match_mun_data <- function(d1, d2, multiple_last_names,
   
   comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
                       "candidate_title_both", "candidate_partymem_code", 
-                      "candidate_partynom_code", "candidate_place_name", 
+                      "candidate_partynom_code", "candidate_place_code", 
                       "candidate_occupation")
   
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_both = 0.5, 
                  candidate_partymem_code = 0.5, 
                  candidate_partynom_code = 0.5, 
-                 candidate_place_name = 0.5, 
+                 candidate_place_code = 0.5, 
                  candidate_occupation = 0.5)
   
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_both = -0.25, 
                  candidate_partymem_code = 0, 
                  candidate_partynom_code = 0, 
-                 candidate_place_name = -0.5, 
+                 candidate_place_code = -0.5, 
                  candidate_occupation = 0)
   
   # Link women with multiple names
@@ -767,7 +767,6 @@ match_mun_data <- function(d1, d2, multiple_last_names,
                               candidate_birthyear = cmp_within_1(),
                               candidate_occupation = cmp_jaccard(), 
                               candidate_title_both = cmp_jaccard(0.5), 
-                              candidate_place_name = cmp_jaccard(),
                               candidate_surname = cmp_last_names()
                             ))
   
@@ -788,8 +787,7 @@ match_mun_data <- function(d1, d2, multiple_last_names,
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
                            candidate_occupation = cmp_jaccard(), 
-                           candidate_title_both = cmp_jaccard(0.5), 
-                           candidate_place_name = cmp_jaccard()
+                           candidate_title_both = cmp_jaccard(0.5)
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -831,17 +829,17 @@ match_sen_data <- function(d1, d2, multiple_last_names,
                       "candidate_title_before", "candidate_title_after", 
                       "candidate_partymem_code", 
                       "candidate_partynom_code", 
-                      "candidate_place_name", "candidate_occupation", 
+                      "candidate_place_code", "candidate_occupation", 
                       "senate_district")
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_before = 0.5, candidate_title_after = 0.5, 
                  candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-                 candidate_place_name = 0.5, candidate_occupation = 0.5, 
+                 candidate_place_code = 0.5, candidate_occupation = 0.5, 
                  senate_district = 2)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_before = -0.5, candidate_title_after = -0.5, 
                  candidate_partymem_code = 0, candidate_partynom_code = 0, 
-                 candidate_place_name = -0.5, candidate_occupation = 0, 
+                 candidate_place_code = -0.5, candidate_occupation = 0, 
                  senate_district = 0)
   
   # Link women with multiple names
@@ -891,7 +889,7 @@ match_sen_data <- function(d1, d2, multiple_last_names,
                                        "candidate_title_before", "candidate_title_after", 
                                        "candidate_partymem_code", 
                                        "candidate_partynom_code", 
-                                       "candidate_place_name", "candidate_occupation", 
+                                       "candidate_place_code", "candidate_occupation", 
                                        "senate_district"), 
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
@@ -903,17 +901,17 @@ match_sen_data <- function(d1, d2, multiple_last_names,
   scores <- score_simple(pairs, "score", 
                          on = c("candidate_name", "candidate_surname", "candidate_birthyear", 
                                 "candidate_title_before", "candidate_title_after", "candidate_partymem_code", 
-                                "candidate_partynom_code", "candidate_place_name", "candidate_occupation", 
+                                "candidate_partynom_code", "candidate_place_code", "candidate_occupation", 
                                 "senate_district"), 
                          w1 = c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                                 candidate_title_before = 0.5, candidate_title_after = 0.5, 
                                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-                                candidate_place_name = 0.5, candidate_occupation = 0.5, 
+                                candidate_place_code = 0.5, candidate_occupation = 0.5, 
                                 senate_district = 2),
                          w0 = c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                                 candidate_title_before = -0.5, candidate_title_after = -0.5, 
                                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
-                                candidate_place_name = -0.5, candidate_occupation = 0, 
+                                candidate_place_code = -0.5, candidate_occupation = 0, 
                                 senate_district = 0), 
                          wna = 0)
   
@@ -939,23 +937,23 @@ match_mun_panel_data <- function(d1, d2, multiple_last_names,
            )
   
   d1_no_change <- d1 %>% 
-    filter(!row_id %in% d1_multiple_names$row_id)
+    filter(!person_id %in% d1_multiple_names$person_id)
   d2_no_change <- d2 %>% 
-    filter(!row_id %in% d2_multiple_names$row_id)
+    filter(!person_id %in% d2_multiple_names$person_id)
   
   comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
                       "candidate_title_both", "candidate_partymem_code", 
-                      "candidate_partynom_code", "candidate_place_name", "candidate_occupation")
+                      "candidate_partynom_code", "candidate_place_code", "candidate_occupation")
   
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_both = 0.5, 
                  candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-                 candidate_place_name = 0.5, candidate_occupation = 0.5)
+                 candidate_place_code = 0.5, candidate_occupation = 0.5)
   
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_both = -0.25, 
                  candidate_partymem_code = 0, candidate_partynom_code = 0, 
-                 candidate_place_name = -0.25, candidate_occupation = 0)
+                 candidate_place_code = -0.25, candidate_occupation = 0)
   
   # Link women with multiple names
   blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
@@ -966,7 +964,6 @@ match_mun_panel_data <- function(d1, d2, multiple_last_names,
                               candidate_birthyear = cmp_within_1(),
                               candidate_occupation = cmp_jaccard(), 
                               candidate_title_both = cmp_jaccard(0.5), 
-                              candidate_place_name = cmp_jaccard(),
                               candidate_surname = cmp_last_names()
                             ))
   
@@ -988,8 +985,7 @@ match_mun_panel_data <- function(d1, d2, multiple_last_names,
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
                            candidate_occupation = cmp_jaccard(), 
-                           candidate_title_both = cmp_jaccard(0.5), 
-                           candidate_place_name = cmp_jaccard()
+                           candidate_title_both = cmp_jaccard(0.5)
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -1024,26 +1020,26 @@ match_mun_reg_panel <- function(d1, d2, multiple_last_names,
            )
   
   d1_no_change <- d1 %>% 
-    filter(!row_id %in% d1_multiple_names$row_id)
+    filter(!person_id %in% d1_multiple_names$person_id)
   d2_no_change <- d2 %>% 
-    filter(!row_id %in% d2_multiple_names$row_id)
+    filter(!person_id %in% d2_multiple_names$person_id)
   
   comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
                       "candidate_title_both", "candidate_partymem_code", 
-                      "candidate_partynom_code", "candidate_place_name", 
+                      "candidate_partynom_code", "candidate_place_code", 
                       "candidate_occupation", 
                       "region_name")
   
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_both = 0.5, 
                  candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-                 candidate_place_name = 0.5, candidate_occupation = 0.5, 
+                 candidate_place_code = 0.5, candidate_occupation = 0.5, 
                  region_name = 1)
   
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_both = -0.25, 
                  candidate_partymem_code = 0, candidate_partynom_code = 0, 
-                 candidate_place_name = -0.25, candidate_occupation = 0, 
+                 candidate_place_code = -0.25, candidate_occupation = 0, 
                  region_name = -0.25)
   
   # Link women with multiple names
@@ -1055,7 +1051,6 @@ match_mun_reg_panel <- function(d1, d2, multiple_last_names,
                               candidate_birthyear = cmp_within_1(),
                               candidate_occupation = cmp_jaccard(), 
                               candidate_title_both = cmp_jaccard(0.5), 
-                              candidate_place_name = cmp_jaccard(),
                               candidate_surname = cmp_last_names()
                             ))
   
@@ -1077,8 +1072,7 @@ match_mun_reg_panel <- function(d1, d2, multiple_last_names,
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
                            candidate_occupation = cmp_jaccard(), 
-                           candidate_title_both = cmp_jaccard(0.5), 
-                           candidate_place_name = cmp_jaccard()
+                           candidate_title_both = cmp_jaccard(0.5)
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -1113,24 +1107,24 @@ match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("c
            )
   
   d1_no_change <- d1 %>% 
-    filter(!row_id %in% d1_multiple_names$row_id)
+    filter(!person_id %in% d1_multiple_names$person_id)
   d2_no_change <- d2 %>% 
-    filter(!row_id %in% d2_multiple_names$row_id)
+    filter(!person_id %in% d2_multiple_names$person_id)
   
   comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
                       "candidate_title_both", "candidate_partymem_code", 
-                      "candidate_partynom_code", "candidate_place_name", "candidate_occupation", 
+                      "candidate_partynom_code", "candidate_place_code", "candidate_occupation", 
                       "region_name")
   
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
          candidate_title_both = 0.5, 
          candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-         candidate_place_name = 0.5, candidate_occupation = 0.5, 
+         candidate_place_code = 0.5, candidate_occupation = 0.5, 
          region_name = 1)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
          candidate_title_both = -0.25, 
          candidate_partymem_code = 0, candidate_partynom_code = 0, 
-         candidate_place_name = -0.25, candidate_occupation = 0, 
+         candidate_place_code = -0.25, candidate_occupation = 0, 
          region_name = -0.25)
   
   # Link women with multiple names
@@ -1142,7 +1136,6 @@ match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("c
                               candidate_birthyear = cmp_within_1(),
                               candidate_occupation = cmp_jaccard(), 
                               candidate_title_both = cmp_jaccard(0.5), 
-                              candidate_place_name = cmp_jaccard(),
                               candidate_surname = cmp_last_names()
                             ))
   
@@ -1164,8 +1157,7 @@ match_mr_psp_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("c
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
                            candidate_occupation = cmp_jaccard(), 
-                           candidate_title_both = cmp_jaccard(0.5), 
-                           candidate_place_name = cmp_jaccard()
+                           candidate_title_both = cmp_jaccard(0.5)
                          ))
   
   scores <- score_simple(pairs, "score", 
@@ -1205,22 +1197,22 @@ match_psp_sen_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("
     )
   
   d1_no_change <- d1 %>% 
-    filter(!row_id %in% d1_multiple_names$row_id)
+    filter(!person_id %in% d1_multiple_names$person_id)
   d2_no_change <- d2 %>% 
-    filter(!row_id %in% d2_multiple_names$row_id)
+    filter(!person_id %in% d2_multiple_names$person_id)
   
   comparing_vars <- c("candidate_name", "candidate_surname", "candidate_birthyear", 
                       "candidate_title_both", "candidate_partymem_code", 
-                      "candidate_partynom_code", "candidate_place_name", "candidate_occupation")
+                      "candidate_partynom_code", "candidate_place_code", "candidate_occupation")
   
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_both = 0.5, 
                  candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
-                 candidate_place_name = 0.5, candidate_occupation = 0.5)
+                 candidate_place_code = 0.5, candidate_occupation = 0.5)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_both = -0.25, 
                  candidate_partymem_code = 0, candidate_partynom_code = 0, 
-                 candidate_place_name = -0.25, candidate_occupation = 0)
+                 candidate_place_code = -0.25, candidate_occupation = 0)
   
   # Link women with multiple names
   blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
@@ -1231,7 +1223,6 @@ match_psp_sen_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("
                               candidate_birthyear = cmp_within_1(),
                               candidate_occupation = cmp_jaccard(), 
                               candidate_title_both = cmp_jaccard(0.5), 
-                              candidate_place_name = cmp_jaccard(),
                               candidate_surname = cmp_last_names()
                             ))
   
@@ -1253,8 +1244,7 @@ match_psp_sen_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
                            candidate_occupation = cmp_jaccard(), 
-                           candidate_title_both = cmp_jaccard(0.5), 
-                           candidate_place_name = cmp_jaccard()
+                           candidate_title_both = cmp_jaccard(0.5)
                          ))
   
   scores <- score_simple(pairs, "score", 

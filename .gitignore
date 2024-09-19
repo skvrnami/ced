@@ -49,5 +49,6 @@ po/*~
 rsconnect/
 validation_data/clea_lc_20240419_r/*.RData
 
+output/*
 output/candidates_panel.rds
 output/candidates_panel.csv
