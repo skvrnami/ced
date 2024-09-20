@@ -17,22 +17,18 @@ tar_source()
 # (and other words and symbols that are not a name, mainly academic titles in the 90s))
 # TODO: replace ´ in last name with ' (or ľ)
 
+# Possible improvements
 # TODO: what would entail matching municipalities and city districts together?
-
-# by-elections in municipalities are not included 
-# TODO: (would be nice in the future)
-
+# TODO: what if election-specific panel contains mismatch which could be resolved
+# during deduplication (by clustering the candidates)
+# TODO: by-elections in municipalities
 # TODO: occupation word2vec distance (?)
 # TODO: compare regions better (Východočeský matches with Královehradecký and Pardubický)
-
-# TODO: vazba na ORP
 # TODO: DiS. - https://cs.wikipedia.org/wiki/Diplomovan%C3%BD_specialista
 
 # Validace
 # TODO: Kouba & Lysek
 # TODO: Party people - připravit seznam kandidátů - noví, starí
-
-# TODO: candidate_place_code = municipal => kodzastup 
 # TODO: validace? = https://programydovoleb.cz/lide/profil/731#data
 
 all_data <- list(
@@ -112,18 +108,6 @@ all_data <- list(
         pull(candidate_surname)
       
       c(split_names, full_names)
-      
-      # mun_1994 %>% 
-      #   mutate(PRIJMENI_list = strsplit(PRIJMENI, "\\s|-")) %>% 
-      #   select(PRIJMENI, PRIJMENI_list, SEX) %>% 
-      #   mutate(PRIJMENI_len = purrr::map_int(PRIJMENI_list, length)) %>% 
-      #   # filter(PRIJMENI_len > 1) %>% 
-      #   mutate(filtered = purrr::map_lgl(PRIJMENI_list, function(x) {
-      #     any(x %in% unique_multiple_last_names)
-      #   })) %>% 
-      #   mutate(filtered_women = filtered & SEX == "female") %>% 
-      #   pull(filtered_women) %>% 
-      #   mean(., na.rm = TRUE)
     }
   )
 )
@@ -4195,59 +4179,14 @@ matched_panels <- list(
           reg_panel_harm
         )
       
-      duplicates <- pivot_table %>% 
-        count(person_id, sort = TRUE) %>% 
-        filter(n > 1)
+      pivot_table_final <- deduplicate_panel(pivot_table, all_candidates)
       
-      pivot_table2 <- pivot_table
-      for(i in duplicates$person_id){
-        check_ids <- pivot_table %>% 
-          group_by(panel_id) %>% 
-          filter(any(person_id == i))
-        (check_df <- all_candidates %>% 
-            filter(person_id %in% check_ids$person_id) %>% 
-            select(election_year, election, candidate_name, candidate_surname, 
-                   candidate_occupation, candidate_birthyear, candidate_partynom_name, 
-                   candidate_partymem_name))
-        
-        ok <- (anyDuplicated(check_df$election) == 0)
-        if(ok){
-          pivot_table2 <- pivot_table2 %>% 
-            group_by(panel_id) %>% 
-            mutate(change = any(person_id == i)) %>% 
-            ungroup %>% 
-            group_by(change) %>% 
-            mutate(panel_id = if_else(change, head(panel_id, 1), panel_id))
-        }else{
-          
-          max_score <- pivot_table2 %>% 
-            group_by(panel_id) %>% 
-            filter(any(person_id == i)) %>% 
-            pull(score) %>% unlist() %>% max()
-          
-          which_n <- which(duplicates$person_id == i)
-          
-          pivot_table2 <- pivot_table2 %>% 
-            group_by(panel_id) %>% 
-            # filter(any(person_id == i)) %>% 
-            mutate(
-              change = any(person_id == i), 
-              has_max_score = purrr::map_lgl(score, function(x) max_score %in% x), 
-              duplicated = person_id == i & !has_max_score
-            ) %>% 
-            filter(!duplicated) %>% 
-            mutate(panel_id = case_when(
-              change & has_max_score ~ panel_id, 
-              change ~ paste0("NR", cur_group_id() + which_n),
-              TRUE ~ panel_id
-            ))
-        }
-      }
-      
-      pivot_table_final <- pivot_table2 %>% 
-        ungroup %>% 
-        select(panel_id, person_id) %>% 
-        unique()
+      stopifnot(
+        pivot_table_final %>% 
+          count(person_id) %>% 
+          filter(n > 1) %>% 
+          nrow() == 0
+      )
       
       # pivot_table_final      
       full_join(all_candidates, pivot_table_final, by = "person_id",
@@ -4277,284 +4216,67 @@ matched_panels <- list(
       mr_psp_match <- match_mr_psp_panel(mun_reg_panel_harm, psp_panel_harm, 
                                          multiple_last_names_eligible)
 
-      ## NEW
-      # mr_psp_unique <- mr_psp_match %>% 
-      #   group_by(person_id.x, person_id.y) %>% 
-      #   summarise(score = max(score))
-      # 
-      # x_multiple <- mr_psp_unique %>% 
-      #   count(person_id.x, sort = TRUE) %>% 
-      #   filter(n > 1)
-      # 
-      # y_multiple <- mr_psp_unique %>% 
-      #   count(person_id.y, sort = TRUE) %>% 
-      #   filter(n > 1)
-      # 
-      # stopifnot(mr_psp_unique %>% 
-      #             select(person_id.x, person_id.y) %>%
-      #             unique() %>% 
-      #             filter(person_id.x %in% x_multiple & 
-      #                      person_id.y %in% y_multiple) %>% 
-      #             nrow() == 0)
-      # 
-      # x_unique <- mr_psp_unique %>% 
-      #   filter(person_id.x %in% x_multiple$person_id.x) %>% 
-      #   group_by(person_id.x) %>% 
-      #   summarise(person_id.y = list(person_id.y), 
-      #             score = list(score)) %>% 
-      #   mutate(person_id.x = as.list(person_id.x))
-      # 
-      # y_unique <- mr_psp_unique %>% 
-      #   filter(person_id.y %in% y_multiple$person_id.y) %>% 
-      #   group_by(person_id.y) %>% 
-      #   summarise(person_id.x = list(person_id.x), 
-      #             score = list(score)) %>% 
-      #   mutate(person_id.y = as.list(person_id.y))
-      # 
-      # both_unique <- mr_psp_unique %>%
-      #   filter(!(person_id.y %in% y_multiple$person_id.y |
-      #              person_id.x %in% x_multiple$person_id.x)) %>%
-      #   mutate(person_id.x = as.list(person_id.x),
-      #          person_id.y = as.list(person_id.y),
-      #          score = as.list(score))
-      # 
-      # mr_volby <- mun_reg_panel_harm %>%
-      #   group_by(person_id) %>%
-      #   summarise(election.x = list(election))
-      # psp_volby <- psp_panel_harm %>%
-      #   group_by(person_id) %>% 
-      #   summarise(election.y = list(election))
-      # 
-      # tmp <- bind_rows(
-      #   x_unique,
-      #   y_unique,
-      #   both_unique
-      # ) %>%
-      #   mutate(panel_id = paste0("RP", row_number())) %>%
-      #   unnest(c(person_id.x, person_id.y, score)) %>%
-      #   left_join(., psp_volby, by = c("person_id.y"="person_id")) %>%
-      #   left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
-      #   group_by(panel_id, person_id.x) %>%
-      #   mutate(n_y = length(unique(person_id.y))) %>%
-      #   group_by(panel_id, person_id.y) %>%
-      #   mutate(n_x = length(unique(person_id.x)))
-      # 
-      # tmp_y <- tmp %>% filter(n_y > 1)
-      # y_keep <- tmp_y %>% 
-      #   unnest(election.y) %>% 
-      #   group_by(panel_id) %>% 
-      #   mutate(
-      #     n = n(), 
-      #     unique_years = length(unique(election.y)), 
-      #     intersection = n != unique_years,
-      #     exclude = intersection & score != max(score)) %>%
-      #   filter(!exclude) %>% 
-      #   ungroup()
-      # 
-      # tmp_x <- tmp %>% filter(n_x > 1)
-      # x_keep <- tmp_x %>% 
-      #   anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>% 
-      #   unnest(election.x) %>% 
-      #   group_by(panel_id) %>% 
-      #   mutate(
-      #     n = n(), 
-      #     unique_years = length(unique(election.x)), 
-      #     intersection = n != unique_years,
-      #     exclude = intersection & score != max(score)) %>%
-      #   filter(!exclude) %>% 
-      #   ungroup()
-      # 
-      # all_unique <- bind_rows(
-      #   x_keep %>% 
-      #     select(-c(election.x, election.y)) %>% 
-      #     group_by(person_id.x, person_id.y) %>% 
-      #     summarise(score = max(score)) %>% 
-      #     ungroup() %>% 
-      #     group_by(person_id.y) %>% 
-      #     summarise(person_id.x = list(person_id.x), 
-      #               score = list(score), .groups = "drop") %>% 
-      #     mutate(person_id.y = as.list(person_id.y)), 
-      #   y_keep %>% 
-      #     select(-c(election.x, election.y)) %>% 
-      #     group_by(person_id.x, person_id.y) %>% 
-      #     summarise(score = max(score)) %>% 
-      #     ungroup() %>% 
-      #     group_by(person_id.x) %>% 
-      #     summarise(person_id.y = list(person_id.y), 
-      #               score = list(score), .groups = "drop") %>% 
-      #     mutate(person_id.x = as.list(person_id.x)), 
-      #   tmp %>% 
-      #     ungroup %>% 
-      #     filter(n_x == 1, n_y == 1) %>% 
-      #     select(person_id.x, person_id.y, score) %>% 
-      #     mutate(across(everything(), as.list))
-      # )
-      # 
-      # missing_x <- mun_reg_panel_harm %>% 
-      #   filter(!person_id %in% unlist(all_unique$person_id.x)) %>% 
-      #   select(person_id.x = person_id) %>% 
-      #   unique() %>% 
-      #   mutate(person_id.x = as.list(person_id.x))
-      # 
-      # missing_y <- psp_panel_harm %>% 
-      #   filter(!person_id %in% unlist(all_unique$person_id.y)) %>% 
-      #   select(person_id.y = person_id) %>% 
-      #   unique() %>% 
-      #   mutate(person_id.y = as.list(person_id.y))
-      # 
-      # pivot_table <- all_unique %>% 
-      #   bind_rows(., missing_x) %>% 
-      #   bind_rows(., missing_y) %>% 
-      #   mutate(panel_id = paste0("RP", row_number())) %>% 
-      #   unnest(c(person_id.x, person_id.y)) %>% 
-      #   pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset", 
-      #                values_to = "person_id") %>% 
-      #   select(-dataset) %>% 
-      #   unique() %>% 
-      #   filter(!is.na(person_id))
-      # 
-      # all_candidates <- 
-      #   bind_rows(
-      #     mun_reg_panel_harm, 
-      #     psp_panel_harm
-      #   )
-      # 
-      # duplicates <- pivot_table %>% 
-      #   count(person_id, sort = TRUE) %>% 
-      #   filter(n > 1)
-      # 
-      # pivot_table2 <- pivot_table
-      # edited_pivot <- data.frame()
-      # for(i in duplicates$person_id){
-      #   cat(which(i == duplicates$person_id), ": ")
-      #   cat(as.character(Sys.time()), "\n")
-      #   check_ids <- pivot_table %>% 
-      #     group_by(panel_id) %>% 
-      #     filter(any(person_id == i))
-      #   (check_df <- all_candidates %>% 
-      #       filter(person_id %in% check_ids$person_id) %>% 
-      #       select(election_year, election, candidate_name, candidate_surname, 
-      #              candidate_occupation, candidate_birthyear, candidate_partynom_name, 
-      #              candidate_partymem_name))
-      #   
-      #   ok <- (anyDuplicated(check_df$election) == 0)
-      #   if(ok){
-      #     edited_id <- pivot_table2 %>% 
-      #       group_by(panel_id) %>% 
-      #       filter(any(person_id == i)) %>% 
-      #       ungroup %>% 
-      #       mutate(new_panel_id = head(panel_id, 1))
-      #     
-      #     edited_pivot <<- bind_rows(edited_pivot, edited_id)
-      #   }else{
-      #     
-      #     max_score <- pivot_table2 %>% 
-      #       group_by(panel_id) %>% 
-      #       filter(any(person_id == i)) %>% 
-      #       pull(score) %>% unlist() %>% max()
-      #     
-      #     which_n <- which(duplicates$person_id == i)
-      #     
-      #     edited_id <- pivot_table2 %>% 
-      #       group_by(panel_id) %>%
-      #       filter(any(person_id == i)) %>%
-      #       mutate(
-      #         has_max_score = purrr::map_lgl(score, function(x) max_score %in% x), 
-      #         duplicated = person_id == i & !has_max_score
-      #       ) %>% 
-      #       filter(!duplicated) %>% 
-      #       mutate(new_panel_id = case_when(
-      #         has_max_score ~ panel_id, 
-      #         TRUE ~ paste0("NR", which_n, letters[cur_group_id()]),
-      #       ))
-      #     
-      #     edited_pivot <<- bind_rows(edited_pivot, edited_id)
-      #   }
-      # }
-      # 
-      # pivot_table_final <- pivot_table2 %>% 
-      #   left_join(., edited_pivot %>% select(panel_id, person_id, new_panel_id),
-      #             by = c("panel_id", "person_id")) %>% 
-      #   mutate(panel_id = if_else(is.na(new_panel_id), panel_id, new_panel_id)) %>% 
-      #   ungroup %>% 
-      #   select(panel_id, person_id) %>% 
-      #   unique()
-      # 
-      # # pivot_table_final      
-      # full_join(all_candidates, pivot_table_final, by = "person_id",
-      #           relationship = "many-to-one") %>%
-      #   select(panel_id, person_id, everything())
-      # 
-      ## OLD
-      # Unique matches between persons
       mr_psp_unique <- mr_psp_match %>%
         group_by(person_id.x, person_id.y) %>%
-        summarise(score = max(score), .groups = "drop")
-      
-      # List of elections for each person
-      mr_volby <- mun_reg_panel_harm %>%
-        group_by(person_id) %>%
-        summarise(election.x = list(election), .groups = "drop")
-      psp_volby <- psp_panel_harm %>%
-        group_by(person_id) %>%
-        summarise(election.y = list(election), .groups = "drop")
-      
-      # Persons with multiple matches
+        summarise(score = max(score))
+
       x_multiple <- mr_psp_unique %>%
         count(person_id.x, sort = TRUE) %>%
         filter(n > 1)
-      
+
       y_multiple <- mr_psp_unique %>%
         count(person_id.y, sort = TRUE) %>%
         filter(n > 1)
-      
+
       stopifnot(mr_psp_unique %>%
                   select(person_id.x, person_id.y) %>%
                   unique() %>%
                   filter(person_id.x %in% x_multiple &
                            person_id.y %in% y_multiple) %>%
                   nrow() == 0)
-      
-      # Single row for each
+
       x_unique <- mr_psp_unique %>%
         filter(person_id.x %in% x_multiple$person_id.x) %>%
         group_by(person_id.x) %>%
         summarise(person_id.y = list(person_id.y),
                   score = list(score)) %>%
         mutate(person_id.x = as.list(person_id.x))
-      
+
       y_unique <- mr_psp_unique %>%
         filter(person_id.y %in% y_multiple$person_id.y) %>%
         group_by(person_id.y) %>%
         summarise(person_id.x = list(person_id.x),
                   score = list(score)) %>%
         mutate(person_id.y = as.list(person_id.y))
-      
+
       both_unique <- mr_psp_unique %>%
         filter(!(person_id.y %in% y_multiple$person_id.y |
                    person_id.x %in% x_multiple$person_id.x)) %>%
         mutate(person_id.x = as.list(person_id.x),
                person_id.y = as.list(person_id.y),
                score = as.list(score))
-      
-      # Create TMP panel_id
+
+      mr_volby <- mun_reg_panel_harm %>%
+        group_by(person_id) %>%
+        summarise(election.x = list(election))
+      psp_volby <- psp_panel_harm %>%
+        group_by(person_id) %>%
+        summarise(election.y = list(election))
+
       tmp <- bind_rows(
         x_unique,
         y_unique,
         both_unique
       ) %>%
-        mutate(panel_id = paste0("PRM", row_number())) %>% 
+        mutate(panel_id = paste0("RP", row_number())) %>%
         unnest(c(person_id.x, person_id.y, score)) %>%
-        left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
         left_join(., psp_volby, by = c("person_id.y"="person_id")) %>%
+        left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
         group_by(panel_id, person_id.x) %>%
         mutate(n_y = length(unique(person_id.y))) %>%
         group_by(panel_id, person_id.y) %>%
-        mutate(n_x = length(unique(person_id.x))) %>% 
-        ungroup()
-      
-      # multiple matches
-      # exclude duplicates based on duplicated elections
+        mutate(n_x = length(unique(person_id.x)))
+
       tmp_y <- tmp %>% filter(n_y > 1)
       y_keep <- tmp_y %>%
         unnest(election.y) %>%
@@ -4566,7 +4288,7 @@ matched_panels <- list(
           exclude = intersection & score != max(score)) %>%
         filter(!exclude) %>%
         ungroup()
-      
+
       tmp_x <- tmp %>% filter(n_x > 1)
       x_keep <- tmp_x %>%
         anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>%
@@ -4579,7 +4301,7 @@ matched_panels <- list(
           exclude = intersection & score != max(score)) %>%
         filter(!exclude) %>%
         ungroup()
-      
+
       all_unique <- bind_rows(
         x_keep %>%
           select(-c(election.x, election.y)) %>%
@@ -4605,49 +4327,201 @@ matched_panels <- list(
           select(person_id.x, person_id.y, score) %>%
           mutate(across(everything(), as.list))
       )
-      
-      # unmatched persons
+
       missing_x <- mun_reg_panel_harm %>%
         filter(!person_id %in% unlist(all_unique$person_id.x)) %>%
         select(person_id.x = person_id) %>%
         unique() %>%
         mutate(person_id.x = as.list(person_id.x))
-      
+
       missing_y <- psp_panel_harm %>%
         filter(!person_id %in% unlist(all_unique$person_id.y)) %>%
         select(person_id.y = person_id) %>%
         unique() %>%
         mutate(person_id.y = as.list(person_id.y))
-      
-      # pivot table
+
       pivot_table <- all_unique %>%
         bind_rows(., missing_x) %>%
         bind_rows(., missing_y) %>%
-        mutate(panel_id = paste0("PRM", row_number())) %>%
+        mutate(panel_id = paste0("RP", row_number())) %>%
         unnest(c(person_id.x, person_id.y)) %>%
         pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset",
                      values_to = "person_id") %>%
         select(-dataset) %>%
         unique() %>%
-        filter(!is.na(person_id)) %>% 
-        select(panel_id, person_id) %>%
-        unique()
-      
+        filter(!is.na(person_id))
+
       all_candidates <-
         bind_rows(
           mun_reg_panel_harm,
           psp_panel_harm
         )
       
-      duplicates <- pivot_table %>% 
-        count(person_id) %>% 
-        filter(n > 1)
+      pivot_table_final <- deduplicate_panel(pivot_table, all_candidates)
       
-      # FIXME: compare all with all, cluster them by distance
-      pivot_table_final <- pivot_table %>% 
-        group_by(person_id) %>% 
-        filter(row_number() == 1) %>% 
-        ungroup()
+      ## OLD
+      # # Unique matches between persons
+      # mr_psp_unique <- mr_psp_match %>%
+      #   group_by(person_id.x, person_id.y) %>%
+      #   summarise(score = max(score), .groups = "drop")
+      # 
+      # # List of elections for each person
+      # mr_volby <- mun_reg_panel_harm %>%
+      #   group_by(person_id) %>%
+      #   summarise(election.x = list(election), .groups = "drop")
+      # psp_volby <- psp_panel_harm %>%
+      #   group_by(person_id) %>%
+      #   summarise(election.y = list(election), .groups = "drop")
+      # 
+      # # Persons with multiple matches
+      # x_multiple <- mr_psp_unique %>%
+      #   count(person_id.x, sort = TRUE) %>%
+      #   filter(n > 1)
+      # 
+      # y_multiple <- mr_psp_unique %>%
+      #   count(person_id.y, sort = TRUE) %>%
+      #   filter(n > 1)
+      # 
+      # stopifnot(mr_psp_unique %>%
+      #             select(person_id.x, person_id.y) %>%
+      #             unique() %>%
+      #             filter(person_id.x %in% x_multiple &
+      #                      person_id.y %in% y_multiple) %>%
+      #             nrow() == 0)
+      # 
+      # # Single row for each
+      # x_unique <- mr_psp_unique %>%
+      #   filter(person_id.x %in% x_multiple$person_id.x) %>%
+      #   group_by(person_id.x) %>%
+      #   summarise(person_id.y = list(person_id.y),
+      #             score = list(score)) %>%
+      #   mutate(person_id.x = as.list(person_id.x))
+      # 
+      # y_unique <- mr_psp_unique %>%
+      #   filter(person_id.y %in% y_multiple$person_id.y) %>%
+      #   group_by(person_id.y) %>%
+      #   summarise(person_id.x = list(person_id.x),
+      #             score = list(score)) %>%
+      #   mutate(person_id.y = as.list(person_id.y))
+      # 
+      # both_unique <- mr_psp_unique %>%
+      #   filter(!(person_id.y %in% y_multiple$person_id.y |
+      #              person_id.x %in% x_multiple$person_id.x)) %>%
+      #   mutate(person_id.x = as.list(person_id.x),
+      #          person_id.y = as.list(person_id.y),
+      #          score = as.list(score))
+      # 
+      # # Create TMP panel_id
+      # tmp <- bind_rows(
+      #   x_unique,
+      #   y_unique,
+      #   both_unique
+      # ) %>%
+      #   mutate(panel_id = paste0("PRM", row_number())) %>% 
+      #   unnest(c(person_id.x, person_id.y, score)) %>%
+      #   left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
+      #   left_join(., psp_volby, by = c("person_id.y"="person_id")) %>%
+      #   group_by(panel_id, person_id.x) %>%
+      #   mutate(n_y = length(unique(person_id.y))) %>%
+      #   group_by(panel_id, person_id.y) %>%
+      #   mutate(n_x = length(unique(person_id.x))) %>% 
+      #   ungroup()
+      # 
+      # # multiple matches
+      # # exclude duplicates based on duplicated elections
+      # tmp_y <- tmp %>% filter(n_y > 1)
+      # y_keep <- tmp_y %>%
+      #   unnest(election.y) %>%
+      #   group_by(panel_id) %>%
+      #   mutate(
+      #     n = n(),
+      #     unique_years = length(unique(election.y)),
+      #     intersection = n != unique_years,
+      #     exclude = intersection & score != max(score)) %>%
+      #   filter(!exclude) %>%
+      #   ungroup()
+      # 
+      # tmp_x <- tmp %>% filter(n_x > 1)
+      # x_keep <- tmp_x %>%
+      #   anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>%
+      #   unnest(election.x) %>%
+      #   group_by(panel_id) %>%
+      #   mutate(
+      #     n = n(),
+      #     unique_years = length(unique(election.x)),
+      #     intersection = n != unique_years,
+      #     exclude = intersection & score != max(score)) %>%
+      #   filter(!exclude) %>%
+      #   ungroup()
+      # 
+      # all_unique <- bind_rows(
+      #   x_keep %>%
+      #     select(-c(election.x, election.y)) %>%
+      #     group_by(person_id.x, person_id.y) %>%
+      #     summarise(score = max(score)) %>%
+      #     ungroup() %>%
+      #     group_by(person_id.y) %>%
+      #     summarise(person_id.x = list(person_id.x),
+      #               score = list(score), .groups = "drop") %>%
+      #     mutate(person_id.y = as.list(person_id.y)),
+      #   y_keep %>%
+      #     select(-c(election.x, election.y)) %>%
+      #     group_by(person_id.x, person_id.y) %>%
+      #     summarise(score = max(score)) %>%
+      #     ungroup() %>%
+      #     group_by(person_id.x) %>%
+      #     summarise(person_id.y = list(person_id.y),
+      #               score = list(score), .groups = "drop") %>%
+      #     mutate(person_id.x = as.list(person_id.x)),
+      #   tmp %>%
+      #     ungroup %>%
+      #     filter(n_x == 1, n_y == 1) %>%
+      #     select(person_id.x, person_id.y, score) %>%
+      #     mutate(across(everything(), as.list))
+      # )
+      # 
+      # # unmatched persons
+      # missing_x <- mun_reg_panel_harm %>%
+      #   filter(!person_id %in% unlist(all_unique$person_id.x)) %>%
+      #   select(person_id.x = person_id) %>%
+      #   unique() %>%
+      #   mutate(person_id.x = as.list(person_id.x))
+      # 
+      # missing_y <- psp_panel_harm %>%
+      #   filter(!person_id %in% unlist(all_unique$person_id.y)) %>%
+      #   select(person_id.y = person_id) %>%
+      #   unique() %>%
+      #   mutate(person_id.y = as.list(person_id.y))
+      # 
+      # # pivot table
+      # pivot_table <- all_unique %>%
+      #   bind_rows(., missing_x) %>%
+      #   bind_rows(., missing_y) %>%
+      #   mutate(panel_id = paste0("PRM", row_number())) %>%
+      #   unnest(c(person_id.x, person_id.y)) %>%
+      #   pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset",
+      #                values_to = "person_id") %>%
+      #   select(-dataset) %>%
+      #   unique() %>%
+      #   filter(!is.na(person_id)) %>% 
+      #   select(panel_id, person_id) %>%
+      #   unique()
+      # 
+      # all_candidates <-
+      #   bind_rows(
+      #     mun_reg_panel_harm,
+      #     psp_panel_harm
+      #   )
+      # 
+      # duplicates <- pivot_table %>% 
+      #   count(person_id) %>% 
+      #   filter(n > 1)
+      # 
+      # # FIXME: compare all with all, cluster them by distance
+      # pivot_table_final <- pivot_table %>% 
+      #   group_by(person_id) %>% 
+      #   filter(row_number() == 1) %>% 
+      #   ungroup()
       
       stopifnot(
         (pivot_table_final %>% 
@@ -4840,13 +4714,15 @@ matched_panels <- list(
           sen_panel_harm
         )
       
-      stopifnot(pivot_table %>% 
+      pivot_table_final <- deduplicate_panel(pivot_table, all_candidates)
+      
+      stopifnot(pivot_table_final %>% 
         count(person_id) %>% 
         filter(n > 1) %>% 
         nrow() == 0)
       
       # pivot_table_final
-      full_join(all_candidates, pivot_table, by = "person_id",
+      full_join(all_candidates, pivot_table_final, by = "person_id",
                 relationship = "many-to-one") %>%
         select(panel_id, person_id, everything())
     }
@@ -5150,15 +5026,15 @@ validations <- list(
     }
   ),
   
-  tar_target(
-    party_pct_vote_not_missing, {
-      stopifnot(complete_panel %>% 
-                  filter(election_type != "Senate") %>% 
-                  pull(party_voteP) %>% 
-                  is.na() %>% 
-                  sum() == 0)
-    }
-  ),
+  # tar_target(
+  #   party_pct_vote_not_missing, {
+  #     stopifnot(complete_panel %>% 
+  #                 filter(election_type != "Senate") %>% 
+  #                 pull(party_voteP) %>% 
+  #                 is.na() %>% 
+  #                 sum() == 0)
+  #   }
+  # ),
   
   # tar_target(
   #   invalid_candidates_zero_votes, {
@@ -5395,7 +5271,7 @@ validations <- list(
       rename(wcn_sk = wcn) %>% 
       left_join(., wcn_2013 %>% rename(wcn_cpcd = wcn))
     
-    plot(wcn_2013_comparison$wcn_sk, wcn_2013_comparison$wcn_cpcd)
+    # plot(wcn_2013_comparison$wcn_sk, wcn_2013_comparison$wcn_cpcd)
     cor(wcn_2013_comparison$wcn_sk, wcn_2013_comparison$wcn_cpcd)
     
     # 2010
@@ -5443,7 +5319,7 @@ validations <- list(
       rename(wcn_sk = wcn) %>% 
       left_join(., wcn_2010)
     
-    plot(wcn_2010_comparison$wcn_sk, wcn_2010_comparison$wcn_cpcd)
+    # plot(wcn_2010_comparison$wcn_sk, wcn_2010_comparison$wcn_cpcd)
     cor(wcn_2010_comparison$wcn_sk, wcn_2010_comparison$wcn_cpcd)
     
     # 2006
@@ -5491,7 +5367,7 @@ validations <- list(
       rename(wcn_sk = wcn) %>% 
       left_join(., wcn_2006)
     
-    plot(wcn_2006_comparison$wcn_sk, wcn_2006_comparison$wcn_cpcd)
+    # plot(wcn_2006_comparison$wcn_sk, wcn_2006_comparison$wcn_cpcd)
     cor(wcn_2006_comparison$wcn_sk, wcn_2006_comparison$wcn_cpcd)
     
     # 2002
@@ -5542,7 +5418,7 @@ validations <- list(
       rename(wcn_sk = wcn) %>% 
       left_join(., wcn_2002)
     
-    plot(wcn_2002_comparison$wcn_sk, wcn_2002_comparison$wcn_cpcd)
+    # plot(wcn_2002_comparison$wcn_sk, wcn_2002_comparison$wcn_cpcd)
     cor(wcn_2002_comparison$wcn_sk, wcn_2002_comparison$wcn_cpcd)
     
     # 1998

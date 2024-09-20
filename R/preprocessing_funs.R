@@ -1272,6 +1272,82 @@ insert_nonconsecutive <- function(pivot_table, noncons, source, target){
   pivot_table
 }
 
+deduplicate_panel <- function(pivot_table, all_candidates){
+  duplicates <- pivot_table %>% 
+    count(person_id, sort = TRUE) %>% 
+    filter(n > 1) 
+  
+  edited_pivot <- data.frame()
+  for(i in duplicates$person_id){
+    check_ids <- pivot_table %>%
+      group_by(panel_id) %>%
+      filter(any(person_id == i)) 
+    check_df <- all_candidates %>%
+        filter(person_id %in% check_ids$person_id)
+    
+    duplicated_person <- pivot_table %>%
+      group_by(panel_id) %>%
+      filter(any(person_id == i))
+    
+    ok <- (anyDuplicated(check_df$election) == 0)
+    if(ok){
+      edited_id <- duplicated_person %>%
+        ungroup %>%
+        mutate(new_panel_id = head(panel_id, 1))
+      
+      edited_pivot <- bind_rows(edited_pivot, edited_id)
+    }else{
+      
+      max_score <- duplicated_person %>%
+        pull(score) %>% unlist() %>% max()
+      
+      which_n <- which(duplicates$person_id == i)
+      
+      edited_id <- duplicated_person %>% 
+        mutate(
+          has_max_score = purrr::map_lgl(score, function(x) max_score %in% x),
+          duplicated = person_id == i & !has_max_score
+        ) %>%
+        arrange(desc(has_max_score)) %>% 
+        ungroup %>% 
+        mutate(row_id = row_number()) %>% 
+        group_by(panel_id, has_max_score) %>% 
+        mutate(
+          group_id = min(row_id)
+        ) %>% 
+        ungroup %>% 
+        mutate(
+          duplicated2 = person_id == i & 
+            has_max_score & group_id != min(group_id)
+        ) %>% 
+        mutate(
+          duplicated = duplicated | duplicated2
+        ) %>% 
+        select(-duplicated2) %>% 
+        mutate(new_panel_id = case_when(
+          has_max_score ~ panel_id,
+          TRUE ~ paste0("NR", which_n, letters[cur_group_id()]),
+        )) %>% ungroup()
+      
+      edited_pivot <- bind_rows(edited_pivot, edited_id)
+    }
+  }
+  
+  if(!"duplicated" %in% colnames(edited_pivot)){
+    edited_pivot$duplicated <- FALSE
+  }
+  
+  pivot_table %>%
+    left_join(., edited_pivot %>% select(panel_id, person_id, new_panel_id, duplicated),
+              by = c("panel_id", "person_id")) %>%
+    mutate(panel_id = if_else(is.na(new_panel_id), panel_id, new_panel_id), 
+           duplicated = if_else(is.na(duplicated), FALSE, duplicated)) %>%
+    filter(!duplicated) %>% 
+    ungroup %>%
+    select(panel_id, person_id) %>%
+    unique()
+}
+
 rename_variables <- function(df){
   vars_list <- c(
     election_date = "DATUMVOLEB",
