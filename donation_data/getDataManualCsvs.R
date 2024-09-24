@@ -610,7 +610,7 @@ data$donation_all = data$donation_financial + data$donation_nonfinancial
 
 data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
 
-saveRDS(data, "primary_data_extracted/vfz2023-spd-nonfinancial.rds")
+saveRDS(data, "primary_data_extracted/vfz2023-spd.rds")
 
 
 ### ANO 2021
@@ -682,7 +682,7 @@ data <- data %>%
 data <- data %>%
   filter(donor_name != "spol. s r.o.")
 
-data$donation_party = "ANO"
+data$donation_party = "ANO2011"
 data$donation_year = 2021
 data$donation_source = 2
 
@@ -694,7 +694,7 @@ data$donation_all = data$donation_financial + data$donation_nonfinancial
 data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
 
 
-saveRDS(data, "primary_data_extracted/vfz2021-ano-nonfinancial.rds")
+saveRDS(data, "primary_data_extracted/vfz2021-ano.rds")
 
 
 ### Trikolora 2021
@@ -800,4 +800,100 @@ data$donation_all = data$donation_financial + data$donation_nonfinancial
 
 data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
 
-saveRDS(data, "primary_data_extracted/vfz2021-trikolora-nonfinancial.rds")
+saveRDS(data, "primary_data_extracted/vfz2021-trikolora.rds")
+
+### Merging
+data = readRDS("data/data_donation_oofppm.rds")
+
+data$polparty=as.character(data$polparty)
+data <- data %>%
+     mutate(polparty = ifelse(polparty == "ano", "ANO2011", polparty),
+            polparty = ifelse(polparty == "kscm", "KSCM", polparty),
+            polparty = ifelse(polparty == "kducsl", "KDU-CSL", polparty),
+            polparty = ifelse(polparty == "pirati", "Pirati", polparty),
+            polparty = ifelse(polparty == "spd", "SPD", polparty),
+            polparty = ifelse(polparty == "stan", "STAN", polparty),
+            polparty = ifelse(polparty == "top09", "TOP09", polparty),
+            polparty = ifelse(polparty == "cssd", "CSSD", polparty),
+            polparty = ifelse(polparty == "svobodni", "Svobodni", polparty),
+            polparty = ifelse(polparty == "trikolora", "Trikolora", polparty),
+            polparty = ifelse(polparty == "prisaha", "Prisaha", polparty)
+                       )
+
+data$donation_source = 1
+
+data$year = as.numeric(data$year)
+
+# Rename columns
+data <- data %>%
+  rename(
+    donation_party = polparty,
+    donation_year = year,
+    donor_name = firstname,
+    donor_lastname = surname,
+    donation_financial = financial_donation,
+    donation_nonfinancial = nonfinancial_donation,
+    donor_birthyear = birthyear,
+  )
+
+data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
+
+### ANO
+# 2020
+
+# 2021
+data_ano_2021 = readRDS("primary_data_extracted/vfz2021-ano.rds")
+data_ano_2021$donor_birthyear = as.numeric(data_ano_2021$donor_birthyear)
+merged_data = rbind(data,data_ano_2021)
+
+### KDUCSL
+#2021
+data_kdu_2021 = readRDS("primary_data_extracted/vfz2021-kducsl.rds")
+data_kdu_2021$donor_birthyear = as.numeric(data_kdu_2021$donor_birthyear)
+merged_data = rbind(data,data_kdu_2021)
+
+### SPD
+#2018
+data_spd_2018 = readRDS("primary_data_extracted/vfz2018-spd.rds")
+data_spd_2018$donor_birthyear = as.numeric(data_spd_2018$donor_birthyear)
+merged_data = rbind(data,data_spd_2018)
+#2019
+data_spd_2019 = readRDS("primary_data_extracted/vfz2019-spd.rds")
+data_spd_2019$donor_birthyear = as.numeric(data_spd_2019$donor_birthyear)
+merged_data = rbind(data,data_spd_2019)
+#2020
+data_spd_2020 = readRDS("primary_data_extracted/vfz2020-spd.rds")
+data_spd_2020$donor_birthyear = as.numeric(data_spd_2020$donor_birthyear)
+merged_data = rbind(data,data_spd_2020)
+#2021
+data_spd_2021 = readRDS("primary_data_extracted/vfz2021-spd.rds")
+data_spd_2021$donor_birthyear = as.numeric(data_spd_2021$donor_birthyear)
+merged_data = rbind(data,data_spd_2021)
+#2022
+data_spd_2022 = readRDS("primary_data_extracted/vfz2022-spd.rds")
+data_spd_2022$donor_birthyear = as.numeric(data_spd_2022$donor_birthyear)
+merged_data = rbind(data,data_spd_2022)
+#2023
+data_spd_2023 = readRDS("primary_data_extracted/vfz2023-spd.rds")
+data_spd_2023$donor_birthyear = as.numeric(data_spd_2023$donor_birthyear)
+merged_data = rbind(data,data_spd_2023)
+
+
+### collapse and order
+final_data <- merged_data %>%
+  group_by(donation_party, donation_year, donor_name, donor_lastname, donor_birthyear, donation_source) %>%
+  summarise(donation_all = sum(donation_all),
+            donation_financial = sum(donation_financial),
+            donation_nonfinancial = sum(donation_nonfinancial))
+
+# Save
+saveRDS(final_data, "data/finalDataset.rds")
+
+####
+data=data %>% group_by(donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx = cur_group_id())
+data=data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx_donorParty = cur_group_id())
+
+### unique donors
+print(max(data$id_xx))
+### unique party donors
+print(max(data$id_xx_donorParty))
