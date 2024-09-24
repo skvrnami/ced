@@ -514,10 +514,29 @@ financial_data <- readRDS("primary_data_extracted/vfz2022-spd-financial.rds")
 merged_data <- merge(data, financial_data, by = c("donor_lastname", "donor_name", "donor_birthyear"), all = TRUE)
 
 # Merge columns
+merged_data$donation_party = "SPD"
+merged_data$donation_year = 2022
+merged_data$donation_source = 2
+merged_data$donation_financial.x[is.na(merged_data$donation_financial.x)] = 0
+merged_data$donation_nonfinancial.x[is.na(merged_data$donation_nonfinancial.x)] = 0
+merged_data$donation_financial.y[is.na(merged_data$donation_financial.y)] = 0
+merged_data$donation_nonfinancial.y[is.na(merged_data$donation_nonfinancial.y)] = 0
+
+merged_data$donation_financial = merged_data$donation_financial.x + merged_data$donation_financial.y
+merged_data$donation_nonfinancial = merged_data$donation_nonfinancial.x + merged_data$donation_nonfinancial.y
+merged_data$donation_all = merged_data$donation_financial + merged_data$donation_nonfinancial
+
+
+merged_data <- merged_data %>%
+  select(-donation_financial.x,-donation_financial.y,-donation_nonfinancial.x,-donation_nonfinancial.y,-donation_all.x,-donation_all.y,
+         -donation_party.x,-donation_party.y,-donation_year.x,-donation_year.y,-donation_source.x,-donation_source.y)
+
+
+merged_data <- merged_data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
 
 
 # Save
-saveRDS(data, "primary_data_extracted/vfz2022-spd.rds")
+saveRDS(merged_data, "primary_data_extracted/vfz2022-spd.rds")
 
 ### SPD 2023
 data <- read_excel("primary_data_extracted/vfz2023-spd_edit.xlsx", sheet = "Sheet1", col_names=c("A","B","C", "D"))
@@ -595,4 +614,190 @@ saveRDS(data, "primary_data_extracted/vfz2023-spd-nonfinancial.rds")
 
 
 ### ANO 2021
+data <- read_excel("primary_data_extracted/vfz2021-ano_edit.xlsx", sheet = "Sheet1", col_names=c("A","B","C"))
+
+data <- data %>%
+  mutate(name = str_split(A, ", ", simplify = TRUE))
+
+data$donor_lastname = data$name[,1]
+data$donor_name = data$name[,2]
+
+# Rename columns
+data <- data %>%
+  rename(
+    donation_financial = C,
+    donor_birthyear = B
+  )
+
+
+data <- data %>%
+  select(-A,-name)
+
+data <- data %>%
+  mutate(
+    donation_financial = str_replace_all(donation_financial, c(
+      "peněžitý dar" = "",
+      "peněžitý" = "",
+      "dar" = "",
+      "I" = "1",
+      ",00" = "",
+      "O" = "0",
+      "       -" = "",
+      "   " = "",
+      "  " = "",
+      " " = ""
+    )))
+
+data$donation_financial = as.numeric(data$donation_financial)
+
+data <- data %>%
+  mutate(donor_name = ifelse(donor_lastname == "Brož, Lubomír", "Lubomír", donor_name),
+         donor_lastname = ifelse(donor_lastname == "Brož, Lubomír", "Brož", donor_lastname),
+         donor_name = ifelse(donor_lastname == "Mrózková Heříková", "Marcela", donor_name),
+         donor_lastname = ifelse(donor_lastname == "Mrózková Heříková", "Heříková", donor_lastname),
+         donor_name = ifelse(donor_lastname == "Slávka", "Vladimír", donor_name),
+         donor_name = ifelse(donor_name == "Irena Pálková", "Irena", donor_name),
+         donor_name = ifelse(donor_name == "VasilSilvestr", "Vasil Silvestr", donor_name))
+
+data <- data %>%
+  mutate(donor_lastname = gsub("  ", " ", donor_lastname),
+         donor_name = gsub("  ", " ", donor_name))
+
+
+data$donor_birthyear_aux = as.numeric(data$donor_birthyear)
+data$donor_birthyear_aux[is.na(data$donor_birthyear)] <- 0
+data$donor_birthyear_aux = format(as.Date((data$donor_birthyear_aux-2), origin = "1900-01-01"), "%Y")
+
+data$donor_birthyear_aux[is.na(data$donor_birthyear_aux)] = format(as.Date(data$donor_birthyear[is.na(data$donor_birthyear_aux)],"%d.%m.%Y"),"%Y")
+
+
+data <- data %>%
+  select(-donor_birthyear)
+
+data <- data %>%
+  rename(
+    donor_birthyear = donor_birthyear_aux
+  )
+
+data <- data %>%
+  filter(donor_name != "spol. s r.o.")
+
+data$donation_party = "ANO"
+data$donation_year = 2021
+data$donation_source = 2
+
+data$donation_financial = as.numeric(data$donation_financial)
+data$donation_nonfinancial = 0
+data$donation_all = data$donation_financial + data$donation_nonfinancial
+
+
+data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
+
+
+saveRDS(data, "primary_data_extracted/vfz2021-ano-nonfinancial.rds")
+
+
 ### Trikolora 2021
+data <- read_excel("primary_data_extracted/vfz2021-trikolora_edit.xlsx", sheet = "Sheet1", col_names=c("A","B","C"))
+
+data <- data %>%
+  mutate(name = str_split(A, ", ", simplify = TRUE))
+
+data$donor_lastname = data$name[,1]
+data$donor_name = data$name[,2]
+
+# Rename columns
+data <- data %>%
+  rename(
+    donation_financial = C,
+    donor_birthyear = B
+  )
+
+data <- data %>%
+  select(-A,-name)
+
+data <- data %>%
+  mutate(financial = ifelse(grepl("peněžitý dar", donation_financial), 1, 0))
+
+data <- data %>%
+  mutate(donation_financial_aux = ifelse(financial == 1, donation_financial, NA))
+
+
+data <- data %>%
+  mutate(
+    donation_financial_aux = str_replace_all(donation_financial_aux, c(
+      "peněžitý dar" = "",
+      "peněžitý" = "",
+      "dar" = "",
+      "I" = "1",
+      ",00" = "",
+      "O" = "0",
+      "       -" = "",
+      "   " = "",
+      "  " = "",
+      " " = ""
+    )))
+
+# Convert 'financial_donation' to numeric and replace NA with 0
+data <- data %>%
+  mutate(donation_financial_aux = as.numeric(donation_financial_aux),
+         donation_financial_aux = ifelse(is.na(donation_financial_aux), 0, donation_financial_aux))
+
+# Generate 'nonfinancial_donation' column based on 'financial' condition
+data <- data %>%
+  mutate(donation_nonfinancial = ifelse(financial == 0, donation_financial, NA))
+
+# Replace specific substrings in 'nonfinancial_donation'
+data <- data %>%
+  mutate(donation_nonfinancial = gsub("bezúplatné plnění", "", donation_nonfinancial),
+         donation_nonfinancial = gsub("dar", "", donation_nonfinancial),
+         donation_nonfinancial = gsub("I", "1", donation_nonfinancial),
+         donation_nonfinancial = gsub(",00", "", donation_nonfinancial),
+         donation_nonfinancial = gsub("O", "0", donation_nonfinancial),
+         donation_nonfinancial = gsub("       -", "", donation_nonfinancial),
+         donation_nonfinancial = gsub("   ", "", donation_nonfinancial),
+         donation_nonfinancial = gsub("  ", "", donation_nonfinancial),
+         donation_nonfinancial = gsub(" ", "", donation_nonfinancial),
+         donation_nonfinancial = gsub(",", ".", donation_nonfinancial))
+
+# Convert 'nonfinancial_donation' to numeric and replace NA with 0
+data <- data %>%
+  mutate(donation_nonfinancial = as.numeric(donation_nonfinancial),
+         donation_nonfinancial = ifelse(is.na(donation_nonfinancial), 0, donation_nonfinancial))
+
+data <- data %>%
+  mutate(donor_lastname = gsub("  ", " ", donor_lastname),
+         donor_name = gsub("  ", " ", donor_name),
+         donor_lastname = gsub(",", "", donor_lastname),
+         donor_name = gsub(",", "", donor_name),
+         donor_lastname = gsub("\\.", "", donor_lastname),
+         donor_name = gsub("\\.", "", donor_name))
+
+# Replace specific values in 'firstname' and 'birthdate'
+data <- data %>%
+  mutate(donor_name = ifelse(donor_name == "JIitka", "Jitka", donor_name),
+         donor_lastname = ifelse(donor_lastname == "Fošunová" & donor_birthyear == "1966", "Fošumová", donor_lastname),
+         donor_lastname = ifelse(donor_lastname == "Hanák3", "Hanák", donor_lastname),
+         donor_lastname = ifelse(donor_lastname == "KRIZ", "Kříž", donor_lastname),
+         donor_name = ifelse(donor_name == "DAVID", "David", donor_name),
+         donor_lastname = ifelse(donor_lastname == "KAŠNÝ", "Kašný", donor_lastname),
+         donor_lastname = ifelse(donor_lastname == "LORENZ", "Lorenz", donor_lastname))
+
+
+
+data <- data %>%
+  select(-donation_financial)
+data$donation_financial = data$donation_financial_aux
+
+
+data$donation_party = "Trikolora"
+data$donation_year = 2021
+data$donation_source = 2
+
+data$donation_financial = as.numeric(data$donation_financial)
+data$donation_nonfinancial = 0
+data$donation_all = data$donation_financial + data$donation_nonfinancial
+
+data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
+
+saveRDS(data, "primary_data_extracted/vfz2021-trikolora-nonfinancial.rds")
