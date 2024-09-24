@@ -613,6 +613,52 @@ data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastnam
 saveRDS(data, "primary_data_extracted/vfz2023-spd.rds")
 
 
+
+### ANO 2020
+data <- read_excel("primary_data_extracted/vfz2020-ano_edit.xlsx", sheet = "ano_2020", col_names=c("A","B","C","D"))
+
+
+# Rename columns
+data <- data %>%
+  rename(
+    donation_financial = D,
+    donor_name = A,
+    donor_lastname = B,
+    donor_birthyear = C
+  )
+
+
+data$donor_birthyear_aux = as.numeric(data$donor_birthyear)
+data$donor_birthyear_aux[is.na(data$donor_birthyear)] <- 0
+data$donor_birthyear_aux = format(as.Date((data$donor_birthyear_aux-2), origin = "1900-01-01"), "%Y")
+
+data$donor_birthyear_aux[is.na(data$donor_birthyear_aux)] = format(as.Date(data$donor_birthyear[is.na(data$donor_birthyear_aux)],"%d/%m/%Y"),"%Y")
+
+
+data <- data %>%
+  select(-donor_birthyear)
+
+data <- data %>%
+  rename(
+    donor_birthyear = donor_birthyear_aux
+  )
+
+
+data$donation_party = "ANO2011"
+data$donation_year = 2020
+data$donation_source = 2
+
+data$donation_financial = as.numeric(data$donation_financial)
+data$donation_nonfinancial = 0
+data$donation_all = data$donation_financial + data$donation_nonfinancial
+
+
+data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastname", "donor_birthyear", "donation_all", "donation_financial", "donation_nonfinancial", "donation_source")]
+
+
+saveRDS(data, "primary_data_extracted/vfz2020-ano.rds")
+
+
 ### ANO 2021
 data <- read_excel("primary_data_extracted/vfz2021-ano_edit.xlsx", sheet = "Sheet1", col_names=c("A","B","C"))
 
@@ -840,6 +886,9 @@ data <- data[, c("donation_party", "donation_year", "donor_name", "donor_lastnam
 
 ### ANO
 # 2020
+data_ano_2020 = readRDS("primary_data_extracted/vfz2020-ano.rds")
+data_ano_2020$donor_birthyear = as.numeric(data_ano_2020$donor_birthyear)
+merged_data = rbind(data,data_ano_2020)
 
 # 2021
 data_ano_2021 = readRDS("primary_data_extracted/vfz2021-ano.rds")
@@ -890,10 +939,10 @@ final_data <- merged_data %>%
 saveRDS(final_data, "data/finalDataset.rds")
 
 ####
-data=data %>% group_by(donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx = cur_group_id())
-data=data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx_donorParty = cur_group_id())
+final_data=final_data %>% group_by(donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx = cur_group_id())
+final_data=final_data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx_donorParty = cur_group_id())
 
 ### unique donors
-print(max(data$id_xx))
+print(max(final_data$id_xx))
 ### unique party donors
-print(max(data$id_xx_donorParty))
+print(max(final_data$id_xx_donorParty))
