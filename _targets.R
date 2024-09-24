@@ -4,7 +4,7 @@ library(tarchetypes) # Load other packages as needed.
 
 tar_option_set(packages = c("dplyr", "rvest", "here", 
                             "readxl", "readr", "reclin2", 
-                            "tidyr", "names.cze"))
+                            "tidyr", "names.cze", "lubridate"))
 
 tar_source()
 
@@ -17,24 +17,19 @@ tar_source()
 # (and other words and symbols that are not a name, mainly academic titles in the 90s))
 # TODO: replace ´ in last name with ' (or ľ)
 
-# When a person completely changes their name (e.g. due to marriage), 
-# they won't match. They only match if they add an additional last name 
-# to their original last name (such as Adamová => Adamová Pekarová), 
-# or remove a last name. 
-
-# by-elections in municipalities are not included 
-# TODO: (would be nice in the future)
-
+# Possible improvements
+# TODO: what would entail matching municipalities and city districts together?
+# TODO: what if election-specific panel contains mismatch which could be resolved
+# during deduplication (by clustering the candidates)
+# TODO: by-elections in municipalities
 # TODO: occupation word2vec distance (?)
 # TODO: compare regions better (Východočeský matches with Královehradecký and Pardubický)
-
-# TODO: Tab 2 v overleafu?
-
-# TODO: vazba na ORP
 # TODO: DiS. - https://cs.wikipedia.org/wiki/Diplomovan%C3%BD_specialista
 
-# TODO: vazba - party to ParlGov
-# TODO: vazba - party to PartyFacts
+# Validace
+# TODO: Kouba & Lysek
+# TODO: Party people - připravit seznam kandidátů - noví, starí
+# TODO: validace? = https://programydovoleb.cz/lide/profil/731#data
 
 all_data <- list(
   tar_target(all_candidates, {
@@ -113,18 +108,6 @@ all_data <- list(
         pull(candidate_surname)
       
       c(split_names, full_names)
-      
-      # mun_1994 %>% 
-      #   mutate(PRIJMENI_list = strsplit(PRIJMENI, "\\s|-")) %>% 
-      #   select(PRIJMENI, PRIJMENI_list, SEX) %>% 
-      #   mutate(PRIJMENI_len = purrr::map_int(PRIJMENI_list, length)) %>% 
-      #   # filter(PRIJMENI_len > 1) %>% 
-      #   mutate(filtered = purrr::map_lgl(PRIJMENI_list, function(x) {
-      #     any(x %in% unique_multiple_last_names)
-      #   })) %>% 
-      #   mutate(filtered_women = filtered & SEX == "female") %>% 
-      #   pull(filtered_women) %>% 
-      #   mean(., na.rm = TRUE)
     }
   )
 )
@@ -231,7 +214,18 @@ psp_data <- list(
       filter(PRIJMENI != "vytištěného HL") %>% 
       filter(JMENO != "Náprava chybně") %>% 
       rename_variables() %>% 
-      left_join(., ps_1996_results, by = c("electoral_region", "candidate_partyrun_fullname"))
+      left_join(., ps_1996_results, by = c("electoral_region", "candidate_partyrun_fullname")) %>% 
+      mutate(candidate_voteN = if_else(candidate_validity == 1, 0, candidate_voteN)) %>% 
+      mutate(
+        party_voteN = if_else(is.na(party_voteN), 0, party_voteN), 
+        party_voteP = if_else(is.na(party_voteP), 0, party_voteP), 
+        candidate_validity = if_else(party_voteP == 0, 1, candidate_validity),
+        election_type = factor("Chamber of Deputies", 
+                               levels = c("Municipal", "City district",
+                                          "Regional", "Chamber of Deputies",
+                                          "Senate", "European Parliament")),
+        election_date = as.Date("1996-05-31", format = "%Y-%m-%d")
+      )
   }),
   
   tar_target(ps_1998_results, command = {
@@ -270,7 +264,7 @@ psp_data <- list(
         kraj == "kraj_vychodocesky" ~ 3600, 
         kraj == "kraj_jihomoravsky" ~ 3700, 
         kraj == "kraj_severomoravsky" ~ 3800, 
-      )) %>% select(-kraj)
+      )) %>% select(-kraj) 
   }),
   
   tar_target(psp_1998, command = {
@@ -300,7 +294,18 @@ psp_data <- list(
       merge_and_recode_titles %>% 
       filter(PRIJMENI != "HLASOVACÍHO LÍSTKU") %>% 
       rename_variables() %>% 
-      left_join(., ps_1998_results, by = c("electoral_region", "candidate_partyrun_fullname"))
+      left_join(., ps_1998_results, by = c("electoral_region", "candidate_partyrun_fullname")) %>% 
+      mutate(candidate_voteN = if_else(candidate_validity == 1, 0, candidate_voteN)) %>% 
+      mutate(
+        party_voteN = if_else(is.na(party_voteN), 0, party_voteN), 
+        party_voteP = if_else(is.na(party_voteP), 0, party_voteP), 
+        candidate_validity = if_else(party_voteP == 0, 1, candidate_validity),
+        election_type = factor("Chamber of Deputies", 
+                               levels = c("Municipal", "City district",
+                                          "Regional", "Chamber of Deputies",
+                                          "Senate", "European Parliament")),
+        election_date = as.Date("1998-06-19", format = "%Y-%m-%d")
+      )
   }),
   
   tar_target(psp_2002, command = {
@@ -333,7 +338,12 @@ psp_data <- list(
       categorize_sex(., unique_first_names) %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("candidate_partyrun_code", "electoral_region"))
+      left_join(., ps_vysledky, by = c("candidate_partyrun_code", "electoral_region")) %>% 
+      mutate(election_type = factor("Chamber of Deputies", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2002-06-14", format = "%Y-%m-%d"))
   }),
   
   tar_target(psp_2006, command = {
@@ -352,7 +362,12 @@ psp_data <- list(
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Chamber of Deputies", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2006-06-02", format = "%Y-%m-%d"))
   }),
   
   tar_target(psp_2010, command = {
@@ -372,7 +387,12 @@ psp_data <- list(
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Chamber of Deputies", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2010-05-28", format = "%Y-%m-%d"))
   }),
   
   tar_target(psp_2013, command = {
@@ -392,7 +412,12 @@ psp_data <- list(
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Chamber of Deputies", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2013-10-25", format = "%Y-%m-%d"))
   }),
   
   tar_target(psp_2017, command = {
@@ -413,7 +438,12 @@ psp_data <- list(
       select(-c(POCPROC, POHLAVI)) %>% 
       rename_variables() %>% 
       left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Chamber of Deputies", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2017-10-20", format = "%Y-%m-%d"))
   }),
   
   tar_target(psp_2021, command = {
@@ -433,7 +463,12 @@ psp_data <- list(
       select(-c(POHLAVI, SKRUTINIUM)) %>% 
       rename_variables() %>% 
       left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Chamber of Deputies", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2021-10-08", format = "%Y-%m-%d"))
   }), 
   
   tar_target(psp_panel, {
@@ -818,16 +853,18 @@ psp_data <- list(
     ))
   ), 
   
+  tar_target(
+    psp_panel_rds, 
+    saveRDS(psp_panel, "output/election_specific/ps_candidates_panel.rds")
+  ),
+  
+  tar_target(
+    psp_panel_csv, 
+    write.csv(psp_panel, "output/election_specific/ps_candidates_panel.csv", 
+              row.names = FALSE)
+  ),
+  
   NULL
-  # tar_target(
-  #   psp_panel_file_dta, 
-  #   haven::write_dta(psp_panel, "output/psp_panel.dta")
-  # ),
-  # 
-  # tar_target(
-  #   psp_panel_file_rds, 
-  #   saveRDS(psp_panel, "output/psp_panel.rds")
-  # )
 )
 
 # Regional elections --------------------------------------
@@ -850,21 +887,34 @@ reg_data <- list(
       select(-KRAJ) %>% 
       rename_variables()
     
+    parties <- read_excel(here("data", "KZ2000", "KZ2000_reg_20230223_xlsx", "kzrkl.xlsx")) %>% 
+      select(KRZAST, KSTRANA, NAZEV_STRK)
+    
     cpp <- read_cpp(here("data", "KZ2000", "CPPKZ00.xlsx"))
     cns <- cpp %>% rename(NSTRANA = PSTRANA, ZKRATKAN8 = ZKRATKAP8)
-    list_path <- here("data", "KZ2000", "KZ00-Registr_kandidatu.xlsx")
+    list_path <- here("data", "KZ2000", "KZ2000_reg_20230223_xlsx", "kzrk.xlsx")
     year <- as.numeric(stringr::str_extract(list_path, "[0-9]{4}"))
     read_excel(list_path) %>%
       left_join(., cpp, by = "PSTRANA") %>%
       left_join(., cns, by = "NSTRANA") %>%
-      mutate(row_id = row_number(), 
-             ROK_NAROZENI = year - VEK) %>%
+      left_join(., parties, by = c("KRZAST", "KSTRANA")) %>% 
+      mutate(
+        MANDAT = as.numeric(MANDAT == "A"),
+        PLATNOST = as.numeric(PLATNOST != "A"),
+        row_id = row_number(), 
+        ROK_NAROZENI = year - VEK) %>%
       merge_and_recode_titles %>%
-      rename(NAZEV_STRK = KSTRANA_NAZEV) %>% 
       categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
       select(-POCPROC) %>% rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"))
+      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code")) %>% 
+      mutate(election_type = factor("Regional", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2000-11-12", format = "%Y-%m-%d"),
+             candidate_voteN = if_else(is.na(candidate_voteN), 0, candidate_voteN),
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2))
   }),
   
   tar_target(reg_2004, command = {
@@ -885,45 +935,63 @@ reg_data <- list(
       select(-KRAJ) %>% 
       rename_variables()
     
+    parties <- read_excel(here("data", "KZ2004", "KZ2004_reg_20230223_xlsx", "kzrkl.xlsx")) %>% 
+      select(KRZAST, KSTRANA, NAZEV_STRK)
+    
     cpp <- read_cpp(here("data", "KZ2004", "CPPKZ04.xlsx"))
     cns <- cpp %>% rename(NSTRANA = PSTRANA, ZKRATKAN8 = ZKRATKAP8)
-    list_path <- here("data", "KZ2004", "KZ04-Registr_kandidatu.xlsx")
+    list_path <- here("data", "KZ2004", "KZ2004_reg_20230223_xlsx", "kzrk.xlsx")
     year <- as.numeric(stringr::str_extract(list_path, "[0-9]{4}"))
     read_excel(list_path) %>% 
       left_join(., cpp, by = "PSTRANA") %>%
       left_join(., cns, by = "NSTRANA") %>%
+      left_join(., parties, by = c("KRZAST", "KSTRANA")) %>% 
+      mutate(MANDAT = as.numeric(MANDAT == "A"), 
+             PLATNOST = as.numeric(PLATNOST != "A")) %>% 
       mutate(row_id = row_number(), 
              ROK_NAROZENI = year - VEK, 
              MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>%
       merge_and_recode_titles %>%
-      rename(NAZEV_STRK = KSTRANA_NAZEV) %>% 
       categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"))
+      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code")) %>% 
+      mutate(election_type = factor("Regional", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2004-11-05", format = "%Y-%m-%d"), 
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2))
   }),
   
   tar_target(reg_2008, command = {
     reg_vysledky <- read_html(here("data", "KZ2008", "vysledky.xml")) %>% 
       parse_kz_results()
     
-    parties <- read_parties(here("data", "KZ2008", "kz2008_data_dbf", "KZRKL.xlsx"), 
-                            clean_dbf_excel_colnames) %>% 
+    parties <- read_parties(here("data", "KZ2008", "KZ2008_reg_20230223_xlsx", "kzrkl.xlsx"), 
+                            pass) %>% 
       unique
     cpp <- read_cpp(here("data", "KZ2008", "ciselnikyKZ2008", "CPP.xlsx"), 
                     clean_dbf_excel_colnames)
     cns <- read_cns(here("data", "KZ2008", "ciselnikyKZ2008", "CNS.xlsx"), 
                     clean_dbf_excel_colnames)
-    read_candidates(here("data", "KZ2008", "kz2008_data_dbf", "KZRK.xlsx"), 
-                    parties, cpp, cns, clean_dbf_excel_colnames) %>% 
+    read_candidates(here("data", "KZ2008", "KZ2008_reg_20230223_xlsx", "kzrk.xlsx"), 
+                    parties, cpp, cns, cleanup_f = pass) %>% 
       categorize_sex(., unique_first_names) %>% 
       mutate(PRIJMENI = if_else(PRIJMENI == "Svoboda gen.", "Svoboda", PRIJMENI), 
-             MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
+             MANDAT = as.numeric(if_else(is.na(MANDAT), "N", MANDAT) == "A"), 
+             PLATNOST = ifelse(PLATNOST == "A", 0, 1)) %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Regional", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2008-10-17", format = "%Y-%m-%d"), 
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2))
       
   }),
   
@@ -931,23 +999,29 @@ reg_data <- list(
     reg_vysledky <- read_html(here("data", "KZ2012", "vysledky.xml")) %>% 
       parse_kz_results()
     
-    parties <- read_parties(here("data", "KZ2012", "kz2012_data_dbf", "KZRKL.xlsx"), 
-                            clean_dbf_excel_colnames) %>% 
+    parties <- read_parties(here("data", "KZ2012", "KZ2012_reg_20230223_xlsx", "kzrkl.xlsx")) %>% 
       unique
     cpp <- read_cpp(here("data", "KZ2012", "ciselniky20121010", "CPP.xlsx"), 
                     clean_dbf_excel_colnames)
     cns <- read_cns(here("data", "KZ2012", "ciselniky20121010", "CNS.xlsx"), 
                     clean_dbf_excel_colnames)
-    read_candidates(here("data", "KZ2012", "kz2012_data_dbf", "KZRK.xlsx"), 
-                    parties, cpp, cns, clean_dbf_excel_colnames) %>% 
+    read_candidates(here("data", "KZ2012", "KZ2012_reg_20230223_xlsx", "kzrk.xlsx"), 
+                    parties, cpp, cns, pass) %>% 
       categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
-      mutate(MANDAT = if_else(is.na(MANDAT), 0, MANDAT)) %>% 
-      select(-c(PORADIHAHR, POCPROC)) %>% 
+      mutate(MANDAT = as.numeric(if_else(is.na(MANDAT), "N", MANDAT) == "A"), 
+             PLATNOST = ifelse(PLATNOST == "A", 0, 1)) %>% 
+      select(-c(POCPROC)) %>%
       rename_variables() %>% 
       left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Regional", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2012-10-12", format = "%Y-%m-%d"), 
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2))
   }),
   
   tar_target(reg_2016, command = {
@@ -967,7 +1041,13 @@ reg_data <- list(
       select(-c(POCPROC, POHLAVI)) %>% 
       rename_variables() %>% 
       left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Regional", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2016-10-07", format = "%Y-%m-%d"), 
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2))
   }),
   
   tar_target(reg_2020, command = {
@@ -987,7 +1067,13 @@ reg_data <- list(
       select(-c(POCPROC, POHLAVI)) %>% 
       rename_variables() %>% 
       left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("Regional", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2020-10-02", format = "%Y-%m-%d"), 
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2))
   }), 
   
   tar_target(reg_panel, {
@@ -1178,6 +1264,17 @@ reg_data <- list(
       nrow(reg_2000) + nrow(reg_2004) + nrow(reg_2008) + nrow(reg_2012) + 
         nrow(reg_2016) + nrow(reg_2020) 
     ))
+  ),
+  
+  tar_target(
+    reg_panel_rds, 
+    saveRDS(reg_panel, "output/election_specific/reg_candidates_panel.rds")
+  ),
+  
+  tar_target(
+    reg_panel_csv, 
+    write.csv(reg_panel, "output/election_specific/reg_candidates_panel.csv", 
+              row.names = FALSE)
   )
 )
 
@@ -1219,20 +1316,29 @@ mun_data <- list(
       extract_titles_from_first_name %>% 
       categorize_sex(., unique_first_names) %>% 
       select(-c(SLOZENI, VSTRANA, OKRES)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
       group_by(municipality_id, electoral_district_no) %>% 
-      mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
+      mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2) %>% 
+               if_else(is.nan(.), 0, .)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>%
+      mutate(
+        election_date = as.Date("1994-11-18", format = "%Y-%m-%d"), 
+        candidate_voteP = round(candidate_voteN / party_voteN * 100, 2) %>% 
+          if_else(is.nan(.), 0, .))
   }),
   
   tar_target(mun_1998, command = {
@@ -1264,20 +1370,28 @@ mun_data <- list(
       mutate(PRIJMENI = if_else(PRIJMENI == "Viktora starší", "Viktora", PRIJMENI)) %>% 
       filter(PRIJMENI != "vytištěného HL") %>% 
       select(-c(SLOZENI, VSTRANA, ZKRATKAV30, OKRES)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
       group_by(municipality_id, electoral_district_no) %>% 
-      mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
+      mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2) %>% 
+               if_else(is.nan(.), 0, .)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% 
+      mutate(election_date = as.Date("1998-11-13", format = "%Y-%m-%d"),
+             candidate_voteP = round(candidate_voteN / party_voteN * 100, 2) %>% 
+               if_else(is.nan(.), 0, .))
   }),
   
   tar_target(mun_2002, command = {
@@ -1354,7 +1468,11 @@ mun_data <- list(
           stringr::str_trim(., "both")
       ) %>% 
       select(-c(OKRES, OSTRANA)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
@@ -1367,13 +1485,14 @@ mun_data <- list(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% 
+      mutate(election_date = as.Date("2002-11-02", format = "%Y-%m-%d"))
   }),
   
   tar_target(mun_2006, command = {
     parties <- read_municipal_parties(here("data", "KV2006", "KV2006reg20140909_xlsx", "kvros.xlsx"))
     coco <- read_excel(here("data", "KV2006", "KV2006reg20140909_xlsx", "kvrzcoco.xlsx")) %>% 
-      select(KODZASTUP, TYPZASTUP) %>% 
+      select(KODZASTUP, TYPZASTUP, municipality_name = NAZEVZAST) %>% 
       unique()
     cpp <- read_cpp_xml(here("data", "KV2006", "KV2006ciselniky20140909", "cpp.xml"))
     cns <- read_cns_xml(here("data", "KV2006", "KV2006ciselniky20140909", "cns.xml"))
@@ -1394,7 +1513,12 @@ mun_data <- list(
                gsub("\\(roz\\.[ ]*", "(", .)) %>% 
       select(-c(OKRES, OSTRANA, POHLAVI, DATNAR, 
                 POCHL_PRES)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(candidate_voteN = if_else(is.na(candidate_voteN), 0, 
+                                       candidate_voteN), 
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
@@ -1407,7 +1531,11 @@ mun_data <- list(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% mutate(election_date = as.Date("2006-10-20", format = "%Y-%m-%d"), 
+                 candidate_voteP = if_else(
+                   is.na(candidate_voteP) & candidate_voteN == 0,
+                   0, candidate_voteP))
+      
   }),
   
   tar_target(mun_2010, command = {
@@ -1415,7 +1543,7 @@ mun_data <- list(
     cpp <- read_cpp_xml(here("data", "KV2010", "KV2010ciselniky20140903", "cpp.xml"))
     cns <- read_cns_xml(here("data", "KV2010", "KV2010ciselniky20140903", "cns.xml"))
     coco <- read_excel(here("data", "KV2010", "KV2010reg20140903_xlsx", "kvrzcoco.xlsx")) %>% 
-      select(KODZASTUP, TYPZASTUP) %>% 
+      select(KODZASTUP, TYPZASTUP, municipality_name = NAZEVZAST) %>% 
       unique()
     
     candidates <- read_municipal_candidates(here("data", "KV2010", "KV2010reg20140903_xlsx", "kvrk.xlsx"), 
@@ -1453,7 +1581,12 @@ mun_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(OKRES, OSTRANA, POHLAVI, DATNAR, 
                 POCHL_PRES)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(candidate_voteN = if_else(is.na(candidate_voteN), 0, 
+                                       candidate_voteN), 
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
@@ -1466,7 +1599,10 @@ mun_data <- list(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% mutate(election_date = as.Date("2010-10-15", format = "%Y-%m-%d"), 
+                 candidate_voteP = if_else(
+                   is.na(candidate_voteP) & candidate_voteN == 0,
+                   0, candidate_voteP))
   }),
   
   tar_target(mun_2014, command = {
@@ -1474,7 +1610,7 @@ mun_data <- list(
     cpp <- read_cpp_xml(here("data", "KV2014", "KV2014ciselniky20141008", "cpp.xml"))
     cns <- read_cns_xml(here("data", "KV2014", "KV2014ciselniky20141008", "cns.xml"))
     coco <- read_excel(here("data", "KV2014", "KV2014reg20141014_xlsx", "kvrzcoco.xlsx")) %>% 
-      select(KODZASTUP, TYPZASTUP) %>% 
+      select(KODZASTUP, TYPZASTUP, municipality_name = NAZEVZAST) %>% 
       unique()
     
     candidates <- read_municipal_candidates(here("data", "KV2014", "KV2014reg20141014_xlsx", "kvrk.xlsx"), 
@@ -1499,7 +1635,12 @@ mun_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(OKRES, OSTRANA, POHLAVI, DATNAR, 
                 POCHL_PRES)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(candidate_voteN = if_else(is.na(candidate_voteN), 0, 
+                                       candidate_voteN), 
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
@@ -1512,7 +1653,11 @@ mun_data <- list(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% 
+      mutate(election_date = as.Date("2014-10-10", format = "%Y-%m-%d"), 
+             candidate_voteP = if_else(
+               is.na(candidate_voteP) & candidate_voteN == 0,
+               0, candidate_voteP))
   }),
   
   tar_target(mun_2018, command = {
@@ -1520,7 +1665,7 @@ mun_data <- list(
     cpp <- read_cpp(here("data", "KV2018", "KV2018ciselniky20181004", "cpp.xlsx"))
     cns <- read_cns(here("data", "KV2018", "KV2018ciselniky20181004", "cns.xlsx"))
     coco <- read_excel(here("data", "KV2018", "KV2018reg20181008_xlsx", "kvrzcoco.xlsx")) %>% 
-      select(KODZASTUP, TYPZASTUP) %>% 
+      select(KODZASTUP, TYPZASTUP, municipality_name = NAZEVZAST) %>% 
       unique()
     
     candidates <- read_municipal_candidates(here("data", "KV2018", "KV2018reg20181008_xlsx", "kvrk.xlsx"), 
@@ -1558,7 +1703,9 @@ mun_data <- list(
       mutate(
         candidate_voteN = if_else(is.na(candidate_voteN), 0, candidate_voteN), 
         candidate_voteP = if_else(is.na(candidate_voteP), 0, candidate_voteP),
-        candidate_seat = if_else(is.na(candidate_seat), 0, candidate_seat)
+        candidate_seat = if_else(is.na(candidate_seat), 0, candidate_seat),
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
       )
     
     party_results <- candidates %>% 
@@ -1572,7 +1719,7 @@ mun_data <- list(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% mutate(election_date = as.Date("2018-10-05", format = "%Y-%m-%d"))
   }), 
   
   tar_target(mun_2022, command = {
@@ -1582,7 +1729,7 @@ mun_data <- list(
     cpp <- read_cpp(here("data", "KV2022", "KV2022ciselniky20240623", "cpp.xlsx"))
     cns <- read_cns(here("data", "KV2022", "KV2022ciselniky20240623", "cns.xlsx"))
     coco <- read_excel(here("data", "KV2022", "KV2022reg20240623_xlsx", "kvrzcoco.xlsx")) %>% 
-      select(KODZASTUP, TYPZASTUP) %>% 
+      select(KODZASTUP, TYPZASTUP, municipality_name = NAZEVZAST) %>% 
       unique()
     
     candidates <- read_excel(here("data", "KV2022", "KV2022reg20240623_xlsx", "kvrk.xlsx")) %>%
@@ -1624,7 +1771,11 @@ mun_data <- list(
                gsub("\\sml\\.$", "", .)) %>% 
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(OKRES, OSTRANA, PRESKOCENI)) %>% 
-      rename_variables()
+      rename_variables() %>% 
+      mutate(
+        candidate_place_code = municipality_id, 
+        candidate_place_name = municipality_name
+      )
     
     party_results <- candidates %>% 
       group_by(municipality_id, electoral_district_no, party_rank) %>% 
@@ -1637,7 +1788,7 @@ mun_data <- list(
       candidates, party_results, 
       by = c("municipality_id", "electoral_district_no", "party_rank"),
       relationship = "many-to-one"
-    )
+    ) %>% mutate(election_date = as.Date(as.character(election_date), "%Y%m%d"))
   }),
   
   tar_target(district_municipalities_map, {
@@ -1666,14 +1817,46 @@ mun_data <- list(
   }),
   
   ## City districts ------------------------------
-  tar_target(mc_1994, filter_city_districts(mun_1994, district_municipalities_map)),
-  tar_target(mc_1998, filter_city_districts(mun_1998, district_municipalities_map)),
-  tar_target(mc_2002, filter_city_districts(mun_2002, district_municipalities_map)),
-  tar_target(mc_2006, filter_city_districts(mun_2006, district_municipalities_map)),
-  tar_target(mc_2010, filter_city_districts(mun_2010, district_municipalities_map)),
-  tar_target(mc_2014, filter_city_districts(mun_2014, district_municipalities_map)),
-  tar_target(mc_2018, filter_city_districts(mun_2018, district_municipalities_map)),
-  tar_target(mc_2022, filter_city_districts(mun_2022, district_municipalities_map)),
+  tar_target(mc_1994, filter_city_districts(mun_1994, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_1998, filter_city_districts(mun_1998, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_2002, filter_city_districts(mun_2002, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_2006, filter_city_districts(mun_2006, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_2010, filter_city_districts(mun_2010, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_2014, filter_city_districts(mun_2014, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_2018, filter_city_districts(mun_2018, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(mc_2022, filter_city_districts(mun_2022, district_municipalities_map) %>% 
+               mutate(election_type = factor("City district", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
   
   tar_target(mc_panel, {
     mc_94_98 <- match_mun_data(mc_1994, mc_1998, 
@@ -2051,19 +2234,62 @@ mun_data <- list(
     ))
   ),
   
+  tar_target(
+    mc_panel_rds, 
+    saveRDS(mc_panel, "output/election_specific/cd_candidates_panel.rds")
+  ),
+  
+  tar_target(
+    mc_panel_csv, 
+    write.csv(mc_panel, "output/election_specific/cd_candidates_panel.csv", 
+              row.names = FALSE)
+  ),
+  
   ## Municipalities ---------------------------------------
   tar_target(m_1994, filter_municipalities(mun_1994, district_municipalities_map) %>%
                mutate(candidate_surname = gsub('"o', "ö", candidate_surname) %>%
                         gsub('o"', "ö", .) %>%
                         gsub('u"', "ü", .)
-               )),
-  tar_target(m_1998, filter_municipalities(mun_1998, district_municipalities_map)),
-  tar_target(m_2002, filter_municipalities(mun_2002, district_municipalities_map)),
-  tar_target(m_2006, filter_municipalities(mun_2006, district_municipalities_map)),
-  tar_target(m_2010, filter_municipalities(mun_2010, district_municipalities_map)),
-  tar_target(m_2014, filter_municipalities(mun_2014, district_municipalities_map)),
-  tar_target(m_2018, filter_municipalities(mun_2018, district_municipalities_map)),
-  tar_target(m_2022, filter_municipalities(mun_2022, district_municipalities_map)),
+               ) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_1998, filter_municipalities(mun_1998, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_2002, filter_municipalities(mun_2002, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_2006, filter_municipalities(mun_2006, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_2010, filter_municipalities(mun_2010, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_2014, filter_municipalities(mun_2014, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_2018, filter_municipalities(mun_2018, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
+  tar_target(m_2022, filter_municipalities(mun_2022, district_municipalities_map) %>% 
+               mutate(election_type = factor("Municipal", 
+                                             levels = c("Municipal", "City district",
+                                                        "Regional", "Chamber of Deputies",
+                                                        "Senate", "European Parliament")))),
   
   tar_target(
     m_panel, {
@@ -2441,6 +2667,17 @@ mun_data <- list(
       nrow(m_1994) + nrow(m_1998) + nrow(m_2002) + nrow(m_2006) +
         nrow(m_2010) + nrow(m_2014) + nrow(m_2018) + nrow(m_2022)
     ))
+  ), 
+  
+  tar_target(
+    m_panel_rds, 
+    saveRDS(m_panel, "output/election_specific/m_candidates_panel.rds")
+  ),
+  
+  tar_target(
+    m_panel_csv, 
+    write.csv(m_panel, "output/election_specific/m_candidates_panel.csv", 
+              row.names = FALSE)
   )
 )
 
@@ -2463,7 +2700,13 @@ ep_data <- list(
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ep_vysledky, by = "candidate_partyrun_code", 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("European Parliament", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2004-06-11", format = "%Y-%m-%d"), 
+             candidate_validity = as.numeric(candidate_validity))
   }),
   
   tar_target(ep_2009, command = {
@@ -2484,7 +2727,13 @@ ep_data <- list(
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ep_vysledky, by = "candidate_partyrun_code", 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("European Parliament", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2009-06-05", format = "%Y-%m-%d"), 
+             candidate_validity = as.numeric(candidate_validity))
   }),
   
   tar_target(ep_2014, command = {
@@ -2505,7 +2754,13 @@ ep_data <- list(
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ep_vysledky, by = "candidate_partyrun_code", 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("European Parliament", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2014-05-23", format = "%Y-%m-%d"), 
+             candidate_validity = as.numeric(candidate_validity))
   }),
   
   tar_target(ep_2019, command = {
@@ -2524,10 +2779,15 @@ ep_data <- list(
       mutate(ROK_NAROZENI = 2019 - VEK) %>% 
       select(-c(DATNAR, POHLAVI)) %>% 
       categorize_sex(., unique_first_names) %>% 
-      select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ep_vysledky, by = "candidate_partyrun_code", 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("European Parliament", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2019-05-24", format = "%Y-%m-%d"), 
+             candidate_validity = as.numeric(candidate_validity == "N"))
   }), 
   
   tar_target(ep_2024, command = {
@@ -2546,10 +2806,15 @@ ep_data <- list(
       mutate(ROK_NAROZENI = 2024 - VEK) %>% 
       select(-c(POHLAVI)) %>% 
       categorize_sex(., unique_first_names) %>% 
-      select(-c(POCPROC)) %>% 
       rename_variables() %>% 
       left_join(., ep_vysledky, by = "candidate_partyrun_code", 
-                relationship = "many-to-one")
+                relationship = "many-to-one") %>% 
+      mutate(election_type = factor("European Parliament", 
+                                    levels = c("Municipal", "City district",
+                                               "Regional", "Chamber of Deputies",
+                                               "Senate", "European Parliament")), 
+             election_date = as.Date("2024-06-07", format = "%Y-%m-%d"), 
+             candidate_validity = as.numeric(candidate_validity == "N"))
   }),
   
   tar_target(ep_panel, command = {
@@ -2675,6 +2940,17 @@ ep_data <- list(
       stopifnot(nrow(ep_panel) == (
         nrow(ep_2004) + nrow(ep_2009) + nrow(ep_2014) + nrow(ep_2019) + nrow(ep_2024) 
       ))
+  ), 
+  
+  tar_target(
+    ep_panel_rds, 
+    saveRDS(ep_panel, "output/election_specific/ep_candidates_panel.rds")
+  ),
+  
+  tar_target(
+    ep_panel_csv, 
+    write.csv(ep_panel, "output/election_specific/ep_candidates_panel.csv", 
+              row.names = FALSE)
   )
 )
 
@@ -2682,7 +2958,8 @@ ep_data <- list(
 senate_data <- list(
   tar_target(
     senate_df, {
-      candidates <- read_excel("data/SE1996_2022/serk.xlsx")
+      candidates <- read_excel("data/SE1996_2022/serk.xlsx") %>% 
+        filter(!is.na(PRIJMENI))
       
       cpp <- read_cpp("data/SE1996_2022/SENAT_cisel_20230227_xlsx/cpp.xlsx")
       cns <- read_cns("data/SE1996_2022/SENAT_cisel_20230227_xlsx/cns.xlsx")
@@ -2708,7 +2985,12 @@ senate_data <- list(
         mutate(MANDAT = as.numeric(ZVOLEN_K1 == 1 | ZVOLEN_K2 == 1)) %>% 
         select(-c(VSTRANA, PROC_K1, PROC_K2, LOS_K1, LOS_K2, ZVOLEN_K1, 
                   ZVOLEN_K2)) %>% 
-        rename_variables()
+        rename_variables() %>% 
+        mutate(election_type = factor("Senate", 
+                                      levels = c("Municipal", "City district",
+                                                 "Regional", "Chamber of Deputies",
+                                                 "Senate", "European Parliament")), 
+               election_date = as.Date(as.character(election_date), "%Y%m%d"))
     }
   ), 
   
@@ -2718,7 +3000,8 @@ senate_data <- list(
       
       election_dates %>% 
         filter(!is.na(POPIS_CZ)) %>% 
-        pull(DATUMVOLEB)
+        mutate(DATUMVOLEB = as.Date(as.character(DATUMVOLEB), "%Y%m%d")) %>% 
+        pull(DATUMVOLEB) 
     }
   ), 
   
@@ -2741,20 +3024,21 @@ senate_data <- list(
       
       election_dates %>% 
         filter(is.na(POPIS_CZ)) %>% 
+        mutate(DATUMVOLEB = as.Date(as.character(DATUMVOLEB), "%Y%m%d")) %>% 
         pull(DATUMVOLEB)
   }), 
   
   tar_target(
     sen_1996, {
       senate_df %>% 
-        filter(election_date == 19961116)
+        filter(election_date == "1996-11-16")
     }
   ),
   
   tar_target(
     sen_1996a, {
       senate_df %>% 
-        filter(election_date == 19961116) %>% 
+        filter(election_date == "1996-11-16") %>% 
         filter(senate_district %in% sen_1998$senate_district) %>% 
         mutate(row_id = row_number())
     }
@@ -2763,7 +3047,7 @@ senate_data <- list(
   tar_target(
     sen_1996b, {
       senate_df %>% 
-        filter(election_date == 19961116) %>% 
+        filter(election_date == "1996-11-16") %>% 
         filter(senate_district %in% sen_2000$senate_district) %>% 
         mutate(row_id = row_number())
     }
@@ -2772,7 +3056,7 @@ senate_data <- list(
   tar_target(
     sen_1996c, {
       senate_df %>% 
-        filter(election_date == 19961116) %>% 
+        filter(election_date == "1996-11-16") %>% 
         filter(senate_district %in% sen_2002$senate_district) %>% 
         mutate(row_id = row_number())
     }
@@ -2781,7 +3065,7 @@ senate_data <- list(
   tar_target(
     sen_1998, {
       senate_df %>% 
-        filter(election_date == 19981114) %>% 
+        filter(election_date == "1998-11-14") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2789,7 +3073,7 @@ senate_data <- list(
   tar_target(
     sen_2000, {
       senate_df %>% 
-        filter(election_date == 20001112) %>% 
+        filter(election_date == "2000-11-12") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2797,7 +3081,7 @@ senate_data <- list(
   tar_target(
     sen_2002, {
       senate_df %>% 
-        filter(election_date == 20021025) %>% 
+        filter(election_date == "2002-10-25") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2805,7 +3089,7 @@ senate_data <- list(
   tar_target(
     sen_2004, {
       senate_df %>% 
-        filter(election_date == 20041105) %>% 
+        filter(election_date == "2004-11-05") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2813,7 +3097,7 @@ senate_data <- list(
   tar_target(
     sen_2006, {
       senate_df %>% 
-        filter(election_date == 20061020) %>% 
+        filter(election_date == "2006-10-20") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2821,7 +3105,7 @@ senate_data <- list(
   tar_target(
     sen_2008, {
       senate_df %>% 
-        filter(election_date == 20081017) %>% 
+        filter(election_date == "2008-10-17") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2829,7 +3113,7 @@ senate_data <- list(
   tar_target(
     sen_2010, {
       senate_df %>% 
-        filter(election_date == 20101015) %>% 
+        filter(election_date == "2010-10-15") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2837,7 +3121,7 @@ senate_data <- list(
   tar_target(
     sen_2012, {
       senate_df %>% 
-        filter(election_date == 20121012) %>% 
+        filter(election_date == "2012-10-12") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2845,7 +3129,7 @@ senate_data <- list(
   tar_target(
     sen_2014, {
       senate_df %>% 
-        filter(election_date == 20141010) %>% 
+        filter(election_date == "2014-10-10") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2853,7 +3137,7 @@ senate_data <- list(
   tar_target(
     sen_2016, {
       senate_df %>% 
-        filter(election_date == 20161007) %>% 
+        filter(election_date == "2016-10-07") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2861,7 +3145,7 @@ senate_data <- list(
   tar_target(
     sen_2018, {
       senate_df %>% 
-        filter(election_date == 20181005) %>% 
+        filter(election_date == "2018-10-05") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2869,7 +3153,7 @@ senate_data <- list(
   tar_target(
     sen_2020, {
       senate_df %>% 
-        filter(election_date == 20201002) %>% 
+        filter(election_date == "2020-10-02") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -2877,7 +3161,7 @@ senate_data <- list(
   tar_target(
     sen_2022, {
       senate_df %>% 
-        filter(election_date == 20220923) %>% 
+        filter(election_date == "2022-09-23") %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -3326,7 +3610,7 @@ senate_data <- list(
           row_id = row_number(), 
           person_id = paste0("B", row_id)
         ) %>% 
-        mutate(election_year = floor(election_date / 10000))
+        mutate(election_year = year(election_date))
       
       sen_a_b <- match_sen_data(sen_panel_a, sen_panel_b, multiple_last_names_eligible, c("candidate_name", "candidate_surname"))
       sen_b_c <- match_sen_data(sen_panel_b, sen_panel_c, multiple_last_names_eligible, c("candidate_name", "candidate_surname"))
@@ -3408,7 +3692,8 @@ senate_data <- list(
       
       full_join(sen_byel_pivot_long, sen_all_candidates, by = c("panel_id"="person_id", "panel")) %>% 
         arrange(person_id, election_year) %>% 
-        select(-c(panel, panel_id))
+        select(-c(panel, panel_id, year)) %>% 
+        mutate(candidate_validity = if_else(candidate_validity == "A", 0, 1))
     }
   ),
   
@@ -3427,7 +3712,16 @@ senate_data <- list(
     }
   ),
   
-  NULL
+  tar_target(
+    sen_panel_rds, 
+    saveRDS(sen_panel, "output/election_specific/sen_candidates_panel.rds")
+  ),
+  
+  tar_target(
+    sen_panel_csv, 
+    write.csv(sen_panel, "output/election_specific/sen_candidates_panel.csv", 
+              row.names = FALSE)
+  )
 )
 
 # Matching panels together --------------------------------
@@ -3438,86 +3732,87 @@ matched_panels <- list(
       mc_obec <- read_csv("data/mcast_obec.csv", locale = locale(encoding = "WINDOWS-1250")) %>% 
         select(city_district_id = CHODNOTA1, municipality_id = CHODNOTA2)
       
+      m_panel_harm <- m_panel %>% 
+        mutate(election = paste0("M", election_year))
+      
       mc_panel_harm <- mc_panel %>% 
         rename(city_district_id = municipality_id) %>% 
         left_join(mc_obec, by = "city_district_id") %>% 
-        select(-MUNICIPALITY)
+        select(-MUNICIPALITY) %>% 
+        mutate(election = paste0("MC", election_year))
       
-      match_m_mc <- match_mun_panel_data(m_panel, mc_panel_harm, 
+      match_m_mc <- match_mun_panel_data(m_panel_harm, mc_panel_harm, 
                                          multiple_last_names_eligible)
       
-      x_multiple <- match_m_mc %>%
-        select(person_id.x, person_id.y) %>%
-        unique() %>% 
-        count(person_id.x) %>% 
+      
+      mc_mun_unique <- match_m_mc %>% 
+        group_by(person_id.x, person_id.y) %>% 
+        summarise(score = max(score))
+      
+      x_multiple <- mc_mun_unique %>% 
+        count(person_id.x, sort = TRUE) %>% 
         filter(n > 1)
       
-      y_multiple <- match_m_mc %>%
-        select(person_id.x, person_id.y) %>%
-        unique() %>% 
-        count(person_id.y) %>% 
+      y_multiple <- mc_mun_unique %>% 
+        count(person_id.y, sort = TRUE) %>% 
         filter(n > 1)
       
-      stopifnot(match_m_mc %>% 
-        select(person_id.x, person_id.y) %>%
-        unique() %>% 
-        filter(person_id.x %in% x_multiple & 
-                 person_id.y %in% y_multiple) %>% 
-        nrow() == 0)
+      stopifnot(mc_mun_unique %>% 
+                  select(person_id.x, person_id.y) %>%
+                  unique() %>% 
+                  filter(person_id.x %in% x_multiple & 
+                           person_id.y %in% y_multiple) %>% 
+                  nrow() == 0)
       
-      unique_ids <- match_m_mc %>%
-        group_by(person_id.x, person_id.y) %>%
-        summarise(score = max(score), .groups = "drop")
-      
-      x_unique <- unique_ids %>% 
+      x_unique <- mc_mun_unique %>% 
         filter(person_id.x %in% x_multiple$person_id.x) %>% 
         group_by(person_id.x) %>% 
         summarise(person_id.y = list(person_id.y), 
                   score = list(score)) %>% 
         mutate(person_id.x = as.list(person_id.x))
       
-      y_unique <- unique_ids %>% 
+      y_unique <- mc_mun_unique %>% 
         filter(person_id.y %in% y_multiple$person_id.y) %>% 
         group_by(person_id.y) %>% 
         summarise(person_id.x = list(person_id.x), 
                   score = list(score)) %>% 
         mutate(person_id.y = as.list(person_id.y))
       
-      both_unique <- unique_ids %>% 
-        filter(!(person_id.y %in% y_multiple$person_id.y | 
-                   person_id.x %in% x_multiple$person_id.x)) %>% 
-        mutate(person_id.x = as.list(person_id.x), 
-               person_id.y = as.list(person_id.y), 
+      both_unique <- mc_mun_unique %>%
+        filter(!(person_id.y %in% y_multiple$person_id.y |
+                   person_id.x %in% x_multiple$person_id.x)) %>%
+        mutate(person_id.x = as.list(person_id.x),
+               person_id.y = as.list(person_id.y),
                score = as.list(score))
       
-      m_volby <- m_panel %>% 
-        group_by(person_id) %>% summarise(election_year.x = list(election_year))
-      mc_volby <- mc_panel %>% 
-        group_by(person_id) %>% summarise(election_year.y = list(election_year))
+      m_volby <- m_panel_harm %>%
+        group_by(person_id) %>%
+        summarise(election.x = list(election))
+      mc_volby <- mc_panel_harm %>%
+        group_by(person_id) %>% 
+        summarise(election.y = list(election))
       
       tmp <- bind_rows(
-        x_unique, 
-        y_unique, 
+        x_unique,
+        y_unique,
         both_unique
-      ) %>% 
-        # bind_rows(., missing_x) %>% 
-        # bind_rows(., missing_y) %>% 
-        mutate(panel_id = paste0("MM", row_number())) %>% 
-        unnest(c(person_id.x, person_id.y, score)) %>% 
-        left_join(., mc_volby, by = c("person_id.y"="person_id")) %>% 
-        left_join(., m_volby, by = c("person_id.x"="person_id")) %>% 
-        group_by(panel_id, person_id.x) %>% 
-        mutate(n_y = length(unique(person_id.y))) %>% 
-        group_by(panel_id, person_id.y) %>% 
+      ) %>%
+        mutate(panel_id = paste0("MM", row_number())) %>%
+        unnest(c(person_id.x, person_id.y, score)) %>%
+        left_join(., mc_volby, by = c("person_id.y"="person_id")) %>%
+        left_join(., m_volby, by = c("person_id.x"="person_id")) %>%
+        group_by(panel_id, person_id.x) %>%
+        mutate(n_y = length(unique(person_id.y))) %>%
+        group_by(panel_id, person_id.y) %>%
         mutate(n_x = length(unique(person_id.x)))
       
       tmp_y <- tmp %>% filter(n_y > 1)
       y_keep <- tmp_y %>% 
-        unnest(election_year.y) %>% 
+        unnest(election.y) %>% 
         group_by(panel_id) %>% 
         mutate(
           n = n(), 
-          unique_years = length(unique(election_year.y)), 
+          unique_years = length(unique(election.y)), 
           intersection = n != unique_years,
           exclude = intersection & score != max(score)) %>%
         filter(!exclude) %>% 
@@ -3526,11 +3821,11 @@ matched_panels <- list(
       tmp_x <- tmp %>% filter(n_x > 1)
       x_keep <- tmp_x %>% 
         anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>% 
-        unnest(election_year.x) %>% 
+        unnest(election.x) %>% 
         group_by(panel_id) %>% 
         mutate(
           n = n(), 
-          unique_years = length(unique(election_year.x)), 
+          unique_years = length(unique(election.x)), 
           intersection = n != unique_years,
           exclude = intersection & score != max(score)) %>%
         filter(!exclude) %>% 
@@ -3538,33 +3833,37 @@ matched_panels <- list(
       
       all_unique <- bind_rows(
         x_keep %>% 
-          select(-c(election_year.x, election_year.y)) %>% 
-          select(person_id.x, person_id.y) %>% 
-          unique() %>% 
+          select(-c(election.x, election.y)) %>% 
+          group_by(person_id.x, person_id.y) %>% 
+          summarise(score = max(score)) %>% 
+          ungroup() %>% 
           group_by(person_id.y) %>% 
-          summarise(person_id.x = list(person_id.x), .groups = "drop") %>% 
+          summarise(person_id.x = list(person_id.x), 
+                    score = list(score), .groups = "drop") %>% 
           mutate(person_id.y = as.list(person_id.y)), 
         y_keep %>% 
-          select(-c(election_year.x, election_year.y)) %>% 
-          select(person_id.x, person_id.y) %>% 
-          unique() %>% 
+          select(-c(election.x, election.y)) %>% 
+          group_by(person_id.x, person_id.y) %>% 
+          summarise(score = max(score)) %>% 
+          ungroup() %>% 
           group_by(person_id.x) %>% 
-          summarise(person_id.y = list(person_id.y), .groups = "drop") %>% 
+          summarise(person_id.y = list(person_id.y), 
+                    score = list(score), .groups = "drop") %>% 
           mutate(person_id.x = as.list(person_id.x)), 
         tmp %>% 
           ungroup %>% 
           filter(n_x == 1, n_y == 1) %>% 
-          select(person_id.x, person_id.y) %>% 
+          select(person_id.x, person_id.y, score) %>% 
           mutate(across(everything(), as.list))
       )
       
-      missing_x <- m_panel %>% 
+      missing_x <- m_panel_harm %>% 
         filter(!person_id %in% unlist(all_unique$person_id.x)) %>% 
         select(person_id.x = person_id) %>% 
         unique() %>% 
         mutate(person_id.x = as.list(person_id.x))
       
-      missing_y <- mc_panel %>% 
+      missing_y <- mc_panel_harm %>% 
         filter(!person_id %in% unlist(all_unique$person_id.y)) %>% 
         select(person_id.y = person_id) %>% 
         unique() %>% 
@@ -3583,8 +3882,8 @@ matched_panels <- list(
       
       all_candidates <- 
         bind_rows(
-          m_panel %>% mutate(election = paste0("M", election_year)), 
-          mc_panel_harm %>% mutate(election = paste0("MC", election_year))
+          m_panel_harm, 
+          mc_panel_harm
         )
       
       duplicates <- pivot_table %>% 
@@ -3597,10 +3896,10 @@ matched_panels <- list(
           group_by(panel_id) %>% 
           filter(any(person_id == i))
         (check_df <- all_candidates %>% 
-          filter(person_id %in% check_ids$person_id) %>% 
-          select(election_year, election, candidate_name, candidate_surname, 
-                 candidate_occupation, candidate_birthyear, 
-                 candidate_partymem_name, candidate_partynom_name))
+            filter(person_id %in% check_ids$person_id) %>% 
+            select(election_year, election, candidate_name, candidate_surname, 
+                   candidate_occupation, candidate_birthyear, candidate_partynom_name, 
+                   candidate_partymem_name))
         
         ok <- (anyDuplicated(check_df$election) == 0)
         if(ok){
@@ -3611,7 +3910,29 @@ matched_panels <- list(
             group_by(change) %>% 
             mutate(panel_id = if_else(change, head(panel_id, 1), panel_id))
         }else{
-          stop("Error")
+          print(i)
+          
+          max_score <- pivot_table2 %>% 
+            group_by(panel_id) %>% 
+            filter(any(person_id == i)) %>% 
+            pull(score) %>% unlist() %>% max()
+          
+          which_n <- which(duplicates$person_id == i)
+          
+          pivot_table2 <- pivot_table2 %>% 
+            group_by(panel_id) %>% 
+            # filter(any(person_id == i)) %>% 
+            mutate(
+              change = any(person_id == i), 
+              has_max_score = purrr::map_lgl(score, function(x) max_score %in% x), 
+              duplicated = person_id == i & !has_max_score
+            ) %>% 
+            filter(!duplicated) %>% 
+            mutate(panel_id = case_when(
+              change & has_max_score ~ panel_id, 
+              change ~ paste0("NR", cur_group_id() + which_n),
+              TRUE ~ panel_id
+            ))
         }
       }
       
@@ -3622,7 +3943,7 @@ matched_panels <- list(
       
       # pivot_table_final      
       full_join(all_candidates, pivot_table_final, by = "person_id",
-                  relationship = "many-to-one") %>%
+                relationship = "many-to-one") %>%
         select(panel_id, person_id, everything())
     }
   ),
@@ -3858,59 +4179,14 @@ matched_panels <- list(
           reg_panel_harm
         )
       
-      duplicates <- pivot_table %>% 
-        count(person_id, sort = TRUE) %>% 
-        filter(n > 1)
+      pivot_table_final <- deduplicate_panel(pivot_table, all_candidates)
       
-      pivot_table2 <- pivot_table
-      for(i in duplicates$person_id){
-        check_ids <- pivot_table %>% 
-          group_by(panel_id) %>% 
-          filter(any(person_id == i))
-        (check_df <- all_candidates %>% 
-            filter(person_id %in% check_ids$person_id) %>% 
-            select(election_year, election, candidate_name, candidate_surname, 
-                   candidate_occupation, candidate_birthyear, candidate_partynom_name, 
-                   candidate_partymem_name))
-        
-        ok <- (anyDuplicated(check_df$election) == 0)
-        if(ok){
-          pivot_table2 <- pivot_table2 %>% 
-            group_by(panel_id) %>% 
-            mutate(change = any(person_id == i)) %>% 
-            ungroup %>% 
-            group_by(change) %>% 
-            mutate(panel_id = if_else(change, head(panel_id, 1), panel_id))
-        }else{
-          
-          max_score <- pivot_table2 %>% 
-            group_by(panel_id) %>% 
-            filter(any(person_id == i)) %>% 
-            pull(score) %>% unlist() %>% max()
-          
-          which_n <- which(duplicates$person_id == i)
-          
-          pivot_table2 <- pivot_table2 %>% 
-            group_by(panel_id) %>% 
-            # filter(any(person_id == i)) %>% 
-            mutate(
-              change = any(person_id == i), 
-              has_max_score = purrr::map_lgl(score, function(x) max_score %in% x), 
-              duplicated = person_id == i & !has_max_score
-            ) %>% 
-            filter(!duplicated) %>% 
-            mutate(panel_id = case_when(
-              change & has_max_score ~ panel_id, 
-              change ~ paste0("NR", cur_group_id() + which_n),
-              TRUE ~ panel_id
-            ))
-        }
-      }
-      
-      pivot_table_final <- pivot_table2 %>% 
-        ungroup %>% 
-        select(panel_id, person_id) %>% 
-        unique()
+      stopifnot(
+        pivot_table_final %>% 
+          count(person_id) %>% 
+          filter(n > 1) %>% 
+          nrow() == 0
+      )
       
       # pivot_table_final      
       full_join(all_candidates, pivot_table_final, by = "person_id",
@@ -3940,75 +4216,67 @@ matched_panels <- list(
       mr_psp_match <- match_mr_psp_panel(mun_reg_panel_harm, psp_panel_harm, 
                                          multiple_last_names_eligible)
 
-      # Unique matches between persons
       mr_psp_unique <- mr_psp_match %>%
         group_by(person_id.x, person_id.y) %>%
-        summarise(score = max(score), .groups = "drop")
-      
-      # List of elections for each person
-      mr_volby <- mun_reg_panel_harm %>%
-        group_by(person_id) %>%
-        summarise(election.x = list(election), .groups = "drop")
-      psp_volby <- psp_panel_harm %>%
-        group_by(person_id) %>%
-        summarise(election.y = list(election), .groups = "drop")
-      
-      # Persons with multiple matches
+        summarise(score = max(score))
+
       x_multiple <- mr_psp_unique %>%
         count(person_id.x, sort = TRUE) %>%
         filter(n > 1)
-      
+
       y_multiple <- mr_psp_unique %>%
         count(person_id.y, sort = TRUE) %>%
         filter(n > 1)
-      
+
       stopifnot(mr_psp_unique %>%
                   select(person_id.x, person_id.y) %>%
                   unique() %>%
                   filter(person_id.x %in% x_multiple &
                            person_id.y %in% y_multiple) %>%
                   nrow() == 0)
-      
-      # Single row for each
+
       x_unique <- mr_psp_unique %>%
         filter(person_id.x %in% x_multiple$person_id.x) %>%
         group_by(person_id.x) %>%
         summarise(person_id.y = list(person_id.y),
                   score = list(score)) %>%
         mutate(person_id.x = as.list(person_id.x))
-      
+
       y_unique <- mr_psp_unique %>%
         filter(person_id.y %in% y_multiple$person_id.y) %>%
         group_by(person_id.y) %>%
         summarise(person_id.x = list(person_id.x),
                   score = list(score)) %>%
         mutate(person_id.y = as.list(person_id.y))
-      
+
       both_unique <- mr_psp_unique %>%
         filter(!(person_id.y %in% y_multiple$person_id.y |
                    person_id.x %in% x_multiple$person_id.x)) %>%
         mutate(person_id.x = as.list(person_id.x),
                person_id.y = as.list(person_id.y),
                score = as.list(score))
-      
-      # Create TMP panel_id
+
+      mr_volby <- mun_reg_panel_harm %>%
+        group_by(person_id) %>%
+        summarise(election.x = list(election))
+      psp_volby <- psp_panel_harm %>%
+        group_by(person_id) %>%
+        summarise(election.y = list(election))
+
       tmp <- bind_rows(
         x_unique,
         y_unique,
         both_unique
       ) %>%
-        mutate(panel_id = paste0("PRM", row_number())) %>% 
+        mutate(panel_id = paste0("RP", row_number())) %>%
         unnest(c(person_id.x, person_id.y, score)) %>%
-        left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
         left_join(., psp_volby, by = c("person_id.y"="person_id")) %>%
+        left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
         group_by(panel_id, person_id.x) %>%
         mutate(n_y = length(unique(person_id.y))) %>%
         group_by(panel_id, person_id.y) %>%
-        mutate(n_x = length(unique(person_id.x))) %>% 
-        ungroup()
-      
-      # multiple matches
-      # exclude duplicates based on duplicated elections
+        mutate(n_x = length(unique(person_id.x)))
+
       tmp_y <- tmp %>% filter(n_y > 1)
       y_keep <- tmp_y %>%
         unnest(election.y) %>%
@@ -4020,7 +4288,7 @@ matched_panels <- list(
           exclude = intersection & score != max(score)) %>%
         filter(!exclude) %>%
         ungroup()
-      
+
       tmp_x <- tmp %>% filter(n_x > 1)
       x_keep <- tmp_x %>%
         anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>%
@@ -4033,7 +4301,7 @@ matched_panels <- list(
           exclude = intersection & score != max(score)) %>%
         filter(!exclude) %>%
         ungroup()
-      
+
       all_unique <- bind_rows(
         x_keep %>%
           select(-c(election.x, election.y)) %>%
@@ -4059,49 +4327,201 @@ matched_panels <- list(
           select(person_id.x, person_id.y, score) %>%
           mutate(across(everything(), as.list))
       )
-      
-      # unmatched persons
+
       missing_x <- mun_reg_panel_harm %>%
         filter(!person_id %in% unlist(all_unique$person_id.x)) %>%
         select(person_id.x = person_id) %>%
         unique() %>%
         mutate(person_id.x = as.list(person_id.x))
-      
+
       missing_y <- psp_panel_harm %>%
         filter(!person_id %in% unlist(all_unique$person_id.y)) %>%
         select(person_id.y = person_id) %>%
         unique() %>%
         mutate(person_id.y = as.list(person_id.y))
-      
-      # pivot table
+
       pivot_table <- all_unique %>%
         bind_rows(., missing_x) %>%
         bind_rows(., missing_y) %>%
-        mutate(panel_id = paste0("PRM", row_number())) %>%
+        mutate(panel_id = paste0("RP", row_number())) %>%
         unnest(c(person_id.x, person_id.y)) %>%
         pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset",
                      values_to = "person_id") %>%
         select(-dataset) %>%
         unique() %>%
-        filter(!is.na(person_id)) %>% 
-        select(panel_id, person_id) %>%
-        unique()
-      
+        filter(!is.na(person_id))
+
       all_candidates <-
         bind_rows(
           mun_reg_panel_harm,
           psp_panel_harm
         )
       
-      duplicates <- pivot_table %>% 
-        count(person_id) %>% 
-        filter(n > 1)
+      pivot_table_final <- deduplicate_panel(pivot_table, all_candidates)
       
-      # FIXME: compare all with all, cluster them by distance
-      pivot_table_final <- pivot_table %>% 
-        group_by(person_id) %>% 
-        filter(row_number() == 1) %>% 
-        ungroup()
+      ## OLD
+      # # Unique matches between persons
+      # mr_psp_unique <- mr_psp_match %>%
+      #   group_by(person_id.x, person_id.y) %>%
+      #   summarise(score = max(score), .groups = "drop")
+      # 
+      # # List of elections for each person
+      # mr_volby <- mun_reg_panel_harm %>%
+      #   group_by(person_id) %>%
+      #   summarise(election.x = list(election), .groups = "drop")
+      # psp_volby <- psp_panel_harm %>%
+      #   group_by(person_id) %>%
+      #   summarise(election.y = list(election), .groups = "drop")
+      # 
+      # # Persons with multiple matches
+      # x_multiple <- mr_psp_unique %>%
+      #   count(person_id.x, sort = TRUE) %>%
+      #   filter(n > 1)
+      # 
+      # y_multiple <- mr_psp_unique %>%
+      #   count(person_id.y, sort = TRUE) %>%
+      #   filter(n > 1)
+      # 
+      # stopifnot(mr_psp_unique %>%
+      #             select(person_id.x, person_id.y) %>%
+      #             unique() %>%
+      #             filter(person_id.x %in% x_multiple &
+      #                      person_id.y %in% y_multiple) %>%
+      #             nrow() == 0)
+      # 
+      # # Single row for each
+      # x_unique <- mr_psp_unique %>%
+      #   filter(person_id.x %in% x_multiple$person_id.x) %>%
+      #   group_by(person_id.x) %>%
+      #   summarise(person_id.y = list(person_id.y),
+      #             score = list(score)) %>%
+      #   mutate(person_id.x = as.list(person_id.x))
+      # 
+      # y_unique <- mr_psp_unique %>%
+      #   filter(person_id.y %in% y_multiple$person_id.y) %>%
+      #   group_by(person_id.y) %>%
+      #   summarise(person_id.x = list(person_id.x),
+      #             score = list(score)) %>%
+      #   mutate(person_id.y = as.list(person_id.y))
+      # 
+      # both_unique <- mr_psp_unique %>%
+      #   filter(!(person_id.y %in% y_multiple$person_id.y |
+      #              person_id.x %in% x_multiple$person_id.x)) %>%
+      #   mutate(person_id.x = as.list(person_id.x),
+      #          person_id.y = as.list(person_id.y),
+      #          score = as.list(score))
+      # 
+      # # Create TMP panel_id
+      # tmp <- bind_rows(
+      #   x_unique,
+      #   y_unique,
+      #   both_unique
+      # ) %>%
+      #   mutate(panel_id = paste0("PRM", row_number())) %>% 
+      #   unnest(c(person_id.x, person_id.y, score)) %>%
+      #   left_join(., mr_volby, by = c("person_id.x"="person_id")) %>%
+      #   left_join(., psp_volby, by = c("person_id.y"="person_id")) %>%
+      #   group_by(panel_id, person_id.x) %>%
+      #   mutate(n_y = length(unique(person_id.y))) %>%
+      #   group_by(panel_id, person_id.y) %>%
+      #   mutate(n_x = length(unique(person_id.x))) %>% 
+      #   ungroup()
+      # 
+      # # multiple matches
+      # # exclude duplicates based on duplicated elections
+      # tmp_y <- tmp %>% filter(n_y > 1)
+      # y_keep <- tmp_y %>%
+      #   unnest(election.y) %>%
+      #   group_by(panel_id) %>%
+      #   mutate(
+      #     n = n(),
+      #     unique_years = length(unique(election.y)),
+      #     intersection = n != unique_years,
+      #     exclude = intersection & score != max(score)) %>%
+      #   filter(!exclude) %>%
+      #   ungroup()
+      # 
+      # tmp_x <- tmp %>% filter(n_x > 1)
+      # x_keep <- tmp_x %>%
+      #   anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>%
+      #   unnest(election.x) %>%
+      #   group_by(panel_id) %>%
+      #   mutate(
+      #     n = n(),
+      #     unique_years = length(unique(election.x)),
+      #     intersection = n != unique_years,
+      #     exclude = intersection & score != max(score)) %>%
+      #   filter(!exclude) %>%
+      #   ungroup()
+      # 
+      # all_unique <- bind_rows(
+      #   x_keep %>%
+      #     select(-c(election.x, election.y)) %>%
+      #     group_by(person_id.x, person_id.y) %>%
+      #     summarise(score = max(score)) %>%
+      #     ungroup() %>%
+      #     group_by(person_id.y) %>%
+      #     summarise(person_id.x = list(person_id.x),
+      #               score = list(score), .groups = "drop") %>%
+      #     mutate(person_id.y = as.list(person_id.y)),
+      #   y_keep %>%
+      #     select(-c(election.x, election.y)) %>%
+      #     group_by(person_id.x, person_id.y) %>%
+      #     summarise(score = max(score)) %>%
+      #     ungroup() %>%
+      #     group_by(person_id.x) %>%
+      #     summarise(person_id.y = list(person_id.y),
+      #               score = list(score), .groups = "drop") %>%
+      #     mutate(person_id.x = as.list(person_id.x)),
+      #   tmp %>%
+      #     ungroup %>%
+      #     filter(n_x == 1, n_y == 1) %>%
+      #     select(person_id.x, person_id.y, score) %>%
+      #     mutate(across(everything(), as.list))
+      # )
+      # 
+      # # unmatched persons
+      # missing_x <- mun_reg_panel_harm %>%
+      #   filter(!person_id %in% unlist(all_unique$person_id.x)) %>%
+      #   select(person_id.x = person_id) %>%
+      #   unique() %>%
+      #   mutate(person_id.x = as.list(person_id.x))
+      # 
+      # missing_y <- psp_panel_harm %>%
+      #   filter(!person_id %in% unlist(all_unique$person_id.y)) %>%
+      #   select(person_id.y = person_id) %>%
+      #   unique() %>%
+      #   mutate(person_id.y = as.list(person_id.y))
+      # 
+      # # pivot table
+      # pivot_table <- all_unique %>%
+      #   bind_rows(., missing_x) %>%
+      #   bind_rows(., missing_y) %>%
+      #   mutate(panel_id = paste0("PRM", row_number())) %>%
+      #   unnest(c(person_id.x, person_id.y)) %>%
+      #   pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset",
+      #                values_to = "person_id") %>%
+      #   select(-dataset) %>%
+      #   unique() %>%
+      #   filter(!is.na(person_id)) %>% 
+      #   select(panel_id, person_id) %>%
+      #   unique()
+      # 
+      # all_candidates <-
+      #   bind_rows(
+      #     mun_reg_panel_harm,
+      #     psp_panel_harm
+      #   )
+      # 
+      # duplicates <- pivot_table %>% 
+      #   count(person_id) %>% 
+      #   filter(n > 1)
+      # 
+      # # FIXME: compare all with all, cluster them by distance
+      # pivot_table_final <- pivot_table %>% 
+      #   group_by(person_id) %>% 
+      #   filter(row_number() == 1) %>% 
+      #   ungroup()
       
       stopifnot(
         (pivot_table_final %>% 
@@ -4294,13 +4714,15 @@ matched_panels <- list(
           sen_panel_harm
         )
       
-      stopifnot(pivot_table %>% 
+      pivot_table_final <- deduplicate_panel(pivot_table, all_candidates)
+      
+      stopifnot(pivot_table_final %>% 
         count(person_id) %>% 
         filter(n > 1) %>% 
         nrow() == 0)
       
       # pivot_table_final
-      full_join(all_candidates, pivot_table, by = "person_id",
+      full_join(all_candidates, pivot_table_final, by = "person_id",
                 relationship = "many-to-one") %>%
         select(panel_id, person_id, everything())
     }
@@ -4320,57 +4742,46 @@ matched_panels <- list(
       psp_sen_panel_harm <- psp_sen_panel %>% 
         select(-person_id) %>% 
         rename(person_id = panel_id)
+      
       ep_panel_harm <- ep_panel %>% 
         mutate(election_year = as.numeric(election_year), 
-               election = paste0("EP", election_year), 
-               candidate_validity = as.numeric(candidate_validity != "A") %>% 
-                 if_else(is.na(.), 0, .))
+               election = paste0("EP", election_year))
       
       psp_ep_match <- match_psp_sen_panel(psp_sen_panel_harm, ep_panel_harm, 
                                           multiple_last_names_eligible)
       
-      # Unique matches between persons
-      psp_ep_unique <- psp_ep_match %>%
-        group_by(person_id.x, person_id.y) %>%
-        summarise(score = max(score), .groups = "drop")
+      ## NEW
+      psp_ep_unique <- psp_ep_match %>% 
+        group_by(person_id.x, person_id.y) %>% 
+        summarise(score = max(score))
       
-      # List of elections for each person
-      psp_volby <- psp_sen_panel_harm %>%
-        group_by(person_id) %>%
-        summarise(election.x = list(election), .groups = "drop")
-      ep_volby <- ep_panel_harm %>%
-        group_by(person_id) %>%
-        summarise(election.y = list(election), .groups = "drop")
-      
-      # Persons with multiple matches
-      x_multiple <- psp_ep_unique %>%
-        count(person_id.x, sort = TRUE) %>%
+      x_multiple <- psp_ep_unique %>% 
+        count(person_id.x, sort = TRUE) %>% 
         filter(n > 1)
       
-      y_multiple <- psp_ep_unique %>%
-        count(person_id.y, sort = TRUE) %>%
+      y_multiple <- psp_ep_unique %>% 
+        count(person_id.y, sort = TRUE) %>% 
         filter(n > 1)
       
-      stopifnot(psp_ep_unique %>%
+      stopifnot(psp_ep_unique %>% 
                   select(person_id.x, person_id.y) %>%
-                  unique() %>%
-                  filter(person_id.x %in% x_multiple &
-                           person_id.y %in% y_multiple) %>%
+                  unique() %>% 
+                  filter(person_id.x %in% x_multiple & 
+                           person_id.y %in% y_multiple) %>% 
                   nrow() == 0)
       
-      # Single row for each
-      x_unique <- psp_ep_unique %>%
-        filter(person_id.x %in% x_multiple$person_id.x) %>%
-        group_by(person_id.x) %>%
-        summarise(person_id.y = list(person_id.y),
-                  score = list(score)) %>%
+      x_unique <- psp_ep_unique %>% 
+        filter(person_id.x %in% x_multiple$person_id.x) %>% 
+        group_by(person_id.x) %>% 
+        summarise(person_id.y = list(person_id.y), 
+                  score = list(score)) %>% 
         mutate(person_id.x = as.list(person_id.x))
       
-      y_unique <- psp_ep_unique %>%
-        filter(person_id.y %in% y_multiple$person_id.y) %>%
-        group_by(person_id.y) %>%
-        summarise(person_id.x = list(person_id.x),
-                  score = list(score)) %>%
+      y_unique <- psp_ep_unique %>% 
+        filter(person_id.y %in% y_multiple$person_id.y) %>% 
+        group_by(person_id.y) %>% 
+        summarise(person_id.x = list(person_id.x), 
+                  score = list(score)) %>% 
         mutate(person_id.y = as.list(person_id.y))
       
       both_unique <- psp_ep_unique %>%
@@ -4380,124 +4791,169 @@ matched_panels <- list(
                person_id.y = as.list(person_id.y),
                score = as.list(score))
       
-      # Create TMP panel_id
+      psp_volby <- psp_sen_panel_harm %>%
+        group_by(person_id) %>%
+        summarise(election.x = list(election))
+      ep_volby <- ep_panel_harm %>%
+        group_by(person_id) %>% 
+        summarise(election.y = list(election))
+      
       tmp <- bind_rows(
         x_unique,
         y_unique,
         both_unique
       ) %>%
-        mutate(panel_id = paste0("PE", row_number())) %>% 
+        mutate(panel_id = paste0("RM", row_number())) %>%
         unnest(c(person_id.x, person_id.y, score)) %>%
-        left_join(., psp_volby, by = c("person_id.x"="person_id")) %>%
         left_join(., ep_volby, by = c("person_id.y"="person_id")) %>%
+        left_join(., psp_volby, by = c("person_id.x"="person_id")) %>%
         group_by(panel_id, person_id.x) %>%
         mutate(n_y = length(unique(person_id.y))) %>%
         group_by(panel_id, person_id.y) %>%
-        mutate(n_x = length(unique(person_id.x))) %>% 
-        ungroup()
+        mutate(n_x = length(unique(person_id.x)))
       
-      # multiple matches
-      # exclude duplicates based on duplicated elections
       tmp_y <- tmp %>% filter(n_y > 1)
-      y_keep <- tmp_y %>%
-        unnest(election.y) %>%
-        group_by(panel_id) %>%
+      y_keep <- tmp_y %>% 
+        unnest(election.y) %>% 
+        group_by(panel_id) %>% 
         mutate(
-          n = n(),
-          unique_years = length(unique(election.y)),
+          n = n(), 
+          unique_years = length(unique(election.y)), 
           intersection = n != unique_years,
           exclude = intersection & score != max(score)) %>%
-        filter(!exclude) %>%
+        filter(!exclude) %>% 
         ungroup()
       
       tmp_x <- tmp %>% filter(n_x > 1)
-      x_keep <- tmp_x %>%
-        anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>%
-        unnest(election.x) %>%
-        group_by(panel_id) %>%
+      x_keep <- tmp_x %>% 
+        anti_join(., y_keep, by = c("person_id.x", "person_id.y")) %>% 
+        unnest(election.x) %>% 
+        group_by(panel_id) %>% 
         mutate(
-          n = n(),
-          unique_years = length(unique(election.x)),
+          n = n(), 
+          unique_years = length(unique(election.x)), 
           intersection = n != unique_years,
           exclude = intersection & score != max(score)) %>%
-        filter(!exclude) %>%
+        filter(!exclude) %>% 
         ungroup()
       
       all_unique <- bind_rows(
-        x_keep %>%
-          select(-c(election.x, election.y)) %>%
-          group_by(person_id.x, person_id.y) %>%
-          summarise(score = max(score)) %>%
-          ungroup() %>%
-          group_by(person_id.y) %>%
-          summarise(person_id.x = list(person_id.x),
-                    score = list(score), .groups = "drop") %>%
-          mutate(person_id.y = as.list(person_id.y)),
-        y_keep %>%
-          select(-c(election.x, election.y)) %>%
-          group_by(person_id.x, person_id.y) %>%
-          summarise(score = max(score)) %>%
-          ungroup() %>%
-          group_by(person_id.x) %>%
-          summarise(person_id.y = list(person_id.y),
-                    score = list(score), .groups = "drop") %>%
-          mutate(person_id.x = as.list(person_id.x)),
-        tmp %>%
-          ungroup %>%
-          filter(n_x == 1, n_y == 1) %>%
-          select(person_id.x, person_id.y, score) %>%
+        x_keep %>% 
+          select(-c(election.x, election.y)) %>% 
+          group_by(person_id.x, person_id.y) %>% 
+          summarise(score = max(score)) %>% 
+          ungroup() %>% 
+          group_by(person_id.y) %>% 
+          summarise(person_id.x = list(person_id.x), 
+                    score = list(score), .groups = "drop") %>% 
+          mutate(person_id.y = as.list(person_id.y)), 
+        y_keep %>% 
+          select(-c(election.x, election.y)) %>% 
+          group_by(person_id.x, person_id.y) %>% 
+          summarise(score = max(score)) %>% 
+          ungroup() %>% 
+          group_by(person_id.x) %>% 
+          summarise(person_id.y = list(person_id.y), 
+                    score = list(score), .groups = "drop") %>% 
+          mutate(person_id.x = as.list(person_id.x)), 
+        tmp %>% 
+          ungroup %>% 
+          filter(n_x == 1, n_y == 1) %>% 
+          select(person_id.x, person_id.y, score) %>% 
           mutate(across(everything(), as.list))
       )
       
-      # unmatched persons
-      missing_x <- psp_sen_panel_harm %>%
-        filter(!person_id %in% unlist(all_unique$person_id.x)) %>%
-        select(person_id.x = person_id) %>%
-        unique() %>%
+      missing_x <- psp_sen_panel_harm %>% 
+        filter(!person_id %in% unlist(all_unique$person_id.x)) %>% 
+        select(person_id.x = person_id) %>% 
+        unique() %>% 
         mutate(person_id.x = as.list(person_id.x))
       
-      missing_y <- ep_panel_harm %>%
-        filter(!person_id %in% unlist(all_unique$person_id.y)) %>%
-        select(person_id.y = person_id) %>%
-        unique() %>%
+      missing_y <- ep_panel_harm %>% 
+        filter(!person_id %in% unlist(all_unique$person_id.y)) %>% 
+        select(person_id.y = person_id) %>% 
+        unique() %>% 
         mutate(person_id.y = as.list(person_id.y))
       
-      # pivot table
-      pivot_table <- all_unique %>%
-        bind_rows(., missing_x) %>%
-        bind_rows(., missing_y) %>%
-        mutate(panel_id = paste0("PE", row_number())) %>%
-        unnest(c(person_id.x, person_id.y)) %>%
-        pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset",
-                     values_to = "person_id") %>%
-        select(-dataset) %>%
-        unique() %>%
-        filter(!is.na(person_id)) %>% 
-        select(panel_id, person_id) %>%
+      pivot_table <- all_unique %>% 
+        bind_rows(., missing_x) %>% 
+        bind_rows(., missing_y) %>% 
+        mutate(panel_id = paste0("PE", row_number())) %>% 
+        unnest(c(person_id.x, person_id.y)) %>% 
+        pivot_longer(., cols = c(person_id.x, person_id.y), names_to = "dataset", 
+                     values_to = "person_id") %>% 
+        select(-dataset) %>% 
+        unique() %>% 
+        filter(!is.na(person_id))
+      
+      all_candidates <- 
+        bind_rows(
+          psp_sen_panel_harm, 
+          ep_panel_harm
+        )
+      
+      duplicates <- pivot_table %>% 
+        count(person_id, sort = TRUE) %>% 
+        filter(n > 1)
+      
+      pivot_table2 <- pivot_table
+      for(i in duplicates$person_id){
+        # cat(which(i == duplicates$person_id), "\n")
+        check_ids <- pivot_table %>% 
+          group_by(panel_id) %>% 
+          filter(any(person_id == i))
+        (check_df <- all_candidates %>% 
+            filter(person_id %in% check_ids$person_id) %>% 
+            select(election_year, election, candidate_name, candidate_surname, 
+                   candidate_occupation, candidate_birthyear, candidate_partynom_name, 
+                   candidate_partymem_name))
+        
+        ok <- (anyDuplicated(check_df$election) == 0)
+        if(ok){
+          pivot_table2 <- pivot_table2 %>% 
+            group_by(panel_id) %>% 
+            mutate(change = any(person_id == i)) %>% 
+            ungroup %>% 
+            group_by(change) %>% 
+            mutate(panel_id = if_else(change, head(panel_id, 1), panel_id))
+        }else{
+          
+          max_score <- pivot_table2 %>% 
+            group_by(panel_id) %>% 
+            filter(any(person_id == i)) %>% 
+            pull(score) %>% unlist() %>% max()
+          
+          which_n <- which(duplicates$person_id == i)
+          
+          pivot_table2 <- pivot_table2 %>% 
+            group_by(panel_id) %>% 
+            # filter(any(person_id == i)) %>% 
+            mutate(
+              change = any(person_id == i), 
+              has_max_score = purrr::map_lgl(score, function(x) max_score %in% x), 
+              duplicated = person_id == i & !has_max_score
+            ) %>% 
+            filter(!duplicated) %>% 
+            mutate(panel_id = case_when(
+              change & has_max_score ~ panel_id, 
+              change ~ paste0("NR", cur_group_id() + which_n),
+              TRUE ~ panel_id
+            ))
+        }
+      }
+      
+      pivot_table_final <- pivot_table2 %>% 
+        ungroup %>% 
+        select(panel_id, person_id) %>% 
         unique()
       
-      stopifnot(
-        pivot_table %>% 
-          count(person_id) %>% 
-          filter(n > 1) %>% 
-          nrow() == 0
-      )
-      
-      pivot_table_final <- pivot_table # %>% 
-        # mutate(panel_id = if_else(
-        #   panel_id == "PE3", "PE19", panel_id
-        # )) %>% 
-        # unique()
-      
-      all_candidates <- bind_rows(
-        psp_sen_panel_harm, 
-        ep_panel_harm
-      )
-      
-      # pivot_table_final
+      # pivot_table_final      
       full_join(all_candidates, pivot_table_final, by = "person_id",
                 relationship = "many-to-one") %>%
-        select(panel_id, person_id, everything())
+        select(panel_id, person_id, everything()) %>% 
+        select(-c(person_id, row_id, municipality, election)) %>% 
+        rename(person_id = panel_id)
+      
     }
   ), 
   
@@ -4507,18 +4963,176 @@ matched_panels <- list(
         nrow(complete_panel) == (nrow(psp_sen_panel) + nrow(ep_panel))
       )
     }
+  ), 
+  
+  tar_target(
+    complete_panel_rds, 
+    saveRDS(complete_panel, "output/candidates_panel.rds")
+  ),
+  
+  tar_target(
+    complete_panel_csv, 
+    write.csv(complete_panel, "output/candidates_panel.csv", row.names = FALSE)
   )
 )
 
 # Validations ---------------------------------------------
 validations <- list(
-  tar_target(kouba_lysek_2023_tab1, {
-    mc_mun_panel %>% 
-      group_by(municipality_id, election_year) %>% 
-      summarise(n_stran = max(party_rank)) %>% 
-      group_by(election_year) %>% 
-      summarise(pct = mean(n_stran == 1) * 100)
-  }), 
+  tar_target(
+    pref_votes_within_range, {
+      pref_votes <- complete_panel %>% 
+        filter(election_type != "Senate") %>% 
+        pull(candidate_voteP)
+      
+      stopifnot(all(pref_votes >= 0 & pref_votes <= 100))
+    }
+  ),
+  
+  tar_target(
+    abs_pref_votes_nonnegative, {
+      pref_votes <- complete_panel %>% 
+        filter(candidate_validity == 0) %>% 
+        filter(election_type != "Senate") %>% 
+        pull(candidate_voteN)
+      stopifnot(all(pref_votes >= 0))
+    }
+  ),
+  
+  tar_target(
+    abs_round1_votes_nonnegative, {
+      round1_votes <- complete_panel %>% 
+        filter(election_type == "Senate") %>% 
+        pull(candidate_voteN_SR1) 
+      stopifnot(all(round1_votes >= 0))
+    }
+  ),
+  
+  tar_target(
+    pct_round1_votes_nonnegative, {
+      round1_votes <- complete_panel %>% 
+        filter(election_type == "Senate") %>% 
+        pull(candidate_voteP_SR1) 
+      stopifnot(all(round1_votes >= 0))
+    }
+  ),
+  
+  tar_target(
+    party_abs_vote_not_missing, {
+      stopifnot(complete_panel %>% 
+        filter(election_type != "Senate") %>% 
+        pull(party_voteN) %>% 
+        is.na() %>% 
+        sum() == 0)
+    }
+  ),
+  
+  # tar_target(
+  #   party_pct_vote_not_missing, {
+  #     stopifnot(complete_panel %>% 
+  #                 filter(election_type != "Senate") %>% 
+  #                 pull(party_voteP) %>% 
+  #                 is.na() %>% 
+  #                 sum() == 0)
+  #   }
+  # ),
+  
+  # tar_target(
+  #   invalid_candidates_zero_votes, {
+  #     pref_votes <- complete_panel %>%
+  #       filter(election_type != "Senate") %>% 
+  #       filter(candidate_validity == 1) %>% 
+  #       pull(candidate_voteN)
+  #     
+  #     stopifnot(all(pref_votes == 0))
+  #   }
+  # ),
+  
+  tar_target(
+    id_not_missing, {
+      stopifnot(sum(is.na(complete_panel$person_id)) == 0)
+    }
+  ),
+  
+  tar_target(
+    name_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_name)) == 0)
+    }
+  ),
+  
+  tar_target(
+    surname_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_surname)) == 0)
+    }
+  ),
+  
+  tar_target(
+    gender_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_gender)) == 0)
+    }
+  ),
+  
+  tar_target(
+    education_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_education)) == 0)
+    }
+  ),
+  
+  tar_target(
+    age_not_missing, {
+      stopifnot(complete_panel %>% 
+        filter(candidate_validity == 0) %>% 
+        pull(candidate_age) %>% 
+        is.na() %>% 
+        sum() == 0)
+    }
+  ),
+  
+  tar_target(
+    seat_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_seat)) == 0)
+    }
+  ),
+  
+  tar_target(
+    partymem_code_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_partymem_code)) == 0)
+    }
+  ),
+  
+  tar_target(
+    validity_not_missing, {
+      stopifnot(sum(is.na(complete_panel$candidate_validity)) == 0)
+    }
+  ),
+  
+  tar_target(
+    ranking_not_missing, {
+      stopifnot(complete_panel %>% 
+        filter(election_type != "Senate") %>% 
+        pull(candidate_ranking) %>% 
+        is.na() %>% 
+        sum() == 0)
+    }
+  ),
+  
+  tar_target(
+    partynom_code_not_missing, {
+      stopifnot(complete_panel %>% 
+                  filter(!(election_type == "Chamber of Deputies" &
+                             election_year %in% c(1996, 1998))) %>% 
+                  pull(candidate_partynom_code) %>% 
+                  is.na() %>% 
+                  sum() == 0)
+    }
+  ),
+  
+  tar_target(
+    invalid_candidates, {
+      invalid_cands_votes <- complete_panel %>% 
+        filter(candidate_validity == 1) %>% 
+        pull(candidate_voteN)
+    }
+  ),
   
   tar_target(clea_mandates, {
     # Subset of CLEA data containing Czech elections
@@ -4606,37 +5220,17 @@ validations <- list(
       filter(seats_clea != seats_cpcd)
   }),
   
-  tar_target(clea_pref_votes, {
-    NULL
-  }), 
-  
   tar_target(sikk_koker_wcn, {
-    # 2021
-    new_candidates_2021 <- complete_panel %>% 
-      find_new_candidates(., "PSP 2017", "PSP 2021")
+    novelty_data <- read.csv("validation_data/sikk_koker/slate_novelty_dropout.csv") %>% 
+      filter(country == "CZ") %>% 
+      filter(year >= 1996)
     
-    w_new_candidates_2021 <- new_candidates_2021 %>% 
-      calculate_rankings()
-    
-    wcn_2021 <- w_new_candidates_2021 %>% 
-      group_by(candidate_partyrun_fullname) %>% 
-      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
-      arrange(wcn)
-    
-    # 2017
-    new_candidates_2017 <- complete_panel %>% 
-      find_new_candidates(., "PSP 2013", "PSP 2017")
-    
-    w_new_candidates_2017 <- new_candidates_2017 %>% 
-      calculate_rankings()
-    
-    wcn_2017 <- w_new_candidates_2017 %>% 
-      group_by(candidate_partyrun_fullname) %>% 
-      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
-      arrange(wcn)
+    complete_panel2 <- complete_panel %>% 
+      filter(election_type == "Chamber of Deputies") %>% 
+      mutate(election = paste0("PSP ", election_year))
     
     # 2013
-    new_candidates_2013 <- complete_panel %>% 
+    new_candidates_2013 <- complete_panel2 %>% 
       find_new_candidates(., "PSP 2010", "PSP 2013")
     
     w_new_candidates_2013 <- new_candidates_2013 %>% 
@@ -4647,8 +5241,41 @@ validations <- list(
       summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
       arrange(wcn)
     
+    wcn_2013_comparison <- novelty_data %>% 
+      filter(year == 2013) %>% 
+      mutate(candidate_partyrun_fullname = case_when(
+        slate == "ANEO" ~ "Aktiv nezávislých občanů",
+        slate == "ANO 2011" ~ "ANO 2011",
+        slate == "CSSD" ~ "Česká strana sociálně demokratická",
+        slate == "DSSS" ~ "Dělnická strana sociální spravedlnosti",
+        slate == "HLVZHURU" ~ "HLAVU VZHŮRU - volební blok",
+        slate == "KAN" ~ "Klub angažovaných nestraníků",
+        slate == "KC" ~ "Koruna Česká (monarch.str.Čech, Moravy a Slezska)",
+        slate == "KDU-CSL" ~ "Křesťan.a demokrat.unie-Českosl.strana lidová",
+        slate == "KSCM" ~ "Komunistická strana Čech a Moravy",
+        slate == "LEV 21" ~ "LEV 21 - Národní socialisté",
+        slate == "OBC_2011" ~ "OBČANÉ 2011",
+        slate == "ODS" ~ "Občanská demokratická strana",
+        slate == "PB" ~ "Volte Pravý Blok www.cibulka.net",
+        slate == "Pirati" ~ "Česká pirátská strana",
+        slate == "RDS" ~ "Romská demokratická strana",
+        slate == "SPOZ" ~ "Strana Práv Občanů ZEMANOVCI",
+        slate == "SZ" ~ "Strana zelených",
+        slate == "SsCR" ~ "Strana soukromníků České republiky",
+        slate == "Suveren." ~ "Suverenita-Strana zdravého rozumu",
+        slate == "Svobodni" ~ "Strana svobodných občanů",
+        slate == "TOP 09" ~ "TOP 09",
+        slate == "Usvit" ~ "Úsvit přímé demokracie Tomia Okamury",
+        slate == "Zmena" ~ "politické hnutí Změna"
+      )) %>% 
+      rename(wcn_sk = wcn) %>% 
+      left_join(., wcn_2013 %>% rename(wcn_cpcd = wcn))
+    
+    # plot(wcn_2013_comparison$wcn_sk, wcn_2013_comparison$wcn_cpcd)
+    cor(wcn_2013_comparison$wcn_sk, wcn_2013_comparison$wcn_cpcd)
+    
     # 2010
-    new_candidates_2010 <- complete_panel %>% 
+    new_candidates_2010 <- complete_panel2 %>% 
       find_new_candidates(., "PSP 2006", "PSP 2010")
     
     w_new_candidates_2010 <- new_candidates_2010 %>% 
@@ -4657,10 +5284,46 @@ validations <- list(
     wcn_2010 <- w_new_candidates_2010 %>% 
       group_by(candidate_partyrun_fullname) %>% 
       summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
-      arrange(wcn)
+      arrange(wcn) %>% 
+      rename(wcn_cpcd = wcn)
+    
+    wcn_2010_comparison <- novelty_data %>% 
+      filter(year == 2010) %>% 
+      mutate(candidate_partyrun_fullname = case_when(
+        slate == "CPS" ~ "Česká pirátská strana",
+        slate == "CSNS" ~ "Česká strana národně sociální",
+        slate == "CSNS2005" ~ "Česká strana národně socialistická",
+        slate == "CSSD" ~ "Česká strana sociálně demokratická",
+        slate == "DSSS" ~ "Dělnická strana sociální spravedlnosti",
+        slate == "ES" ~ "EVROPSKÝ STŘED",
+        slate == "HS" ~ "Humanistická strana",
+        slate == "KC" ~ "Koruna Česká (monarch.str.Čech, Moravy a Slezska)",
+        slate == "KDU-CSL" ~ "Křesťan.a demokrat.unie-Českosl.strana lidová",
+        slate == "KH" ~ "Klíčové hnutí",
+        slate == "KONS" ~ "Konzervativní strana",
+        slate == "KSCM" ~ "Komunistická strana Čech a Moravy",
+        slate == "LIB" ~ "Liberálové.CZ",
+        slate == "Moravane" ~ "Moravané",
+        slate == "ODS" ~ "Občanská demokratická strana",
+        slate == "Obcane" ~ "OBČANÉ.CZ",
+        slate == "PB" ~ "Volte Pravý Blok www.cibulka.net",
+        slate == "SPOZ" ~ "Strana Práv Občanů ZEMANOVCI",
+        slate == "SPR-RSC" ~ "Sdružení pro republiku-Republikán.strana Českosl.",
+        slate == "STOP" ~ "STOP",
+        slate == "SZ" ~ "Strana zelených",
+        slate == "Suveren." ~ "Suverenita-blok J.Bobošíkové,str.zdravého rozumu",
+        slate == "Svobodni" ~ "Strana svobodných občanů",
+        slate == "TOP 09" ~ "TOP 09",
+        slate == "VV" ~ "Věci veřejné"
+      )) %>% 
+      rename(wcn_sk = wcn) %>% 
+      left_join(., wcn_2010)
+    
+    # plot(wcn_2010_comparison$wcn_sk, wcn_2010_comparison$wcn_cpcd)
+    cor(wcn_2010_comparison$wcn_sk, wcn_2010_comparison$wcn_cpcd)
     
     # 2006
-    new_candidates_2006 <- complete_panel %>% 
+    new_candidates_2006 <- complete_panel2 %>% 
       find_new_candidates(., "PSP 2002", "PSP 2006")
     
     w_new_candidates_2006 <- new_candidates_2006 %>% 
@@ -4669,15 +5332,238 @@ validations <- list(
     wcn_2006 <- w_new_candidates_2006 %>% 
       group_by(candidate_partyrun_fullname) %>% 
       summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
-      arrange(wcn)
+      arrange(wcn) %>% 
+      rename(wcn_cpcd = wcn)
+    
+    wcn_2006_comparison <- novelty_data %>% 
+      filter(year == 2006) %>% 
+      mutate(candidate_partyrun_fullname = case_when(
+        slate == "4 VIZE" ~ "4 VIZE-www.4vize.cz",
+        slate == "BPS" ~ "Balbínova poetická strana",
+        slate == "CHNJ" ~ "České hnutí za národní jednotu",
+        slate == "CSNS2006" ~ "Česká strana národně socialistická",
+        slate == "CSSD" ~ "Česká strana sociálně demokratická",
+        slate == "FiS" ~ "Folklor i Společnost",
+        slate == "HOB" ~ "Helax-Ostrava se baví",
+        slate == "HS" ~ "Humanistická strana",
+        slate == "KC" ~ "Koruna Česká (monar.strana Čech, Moravy a Slezska)",
+        slate == "KDU-CSL" ~ "Křesťan.a demokrat.unie-Českosl.strana lidová",
+        slate == "KSCM" ~ "Komunistická strana Čech a Moravy",
+        slate == "Koal_CR" ~ "Koalice pro Českou republiku",
+        slate == "LiRA" ~ "Liberální reformní strana" ,
+        slate == "M" ~ "Moravané",
+        slate == "NEZ" ~ "NEZÁVISLÍ",
+        slate == "NEZ/DEM" ~ "NEZÁVISLÍ DEMOKRATÉ (předseda V.Železný)",
+        slate == "NS" ~ "Národní strana",
+        slate == "ODS" ~ "Občanská demokratická strana",
+        slate == "PB" ~ "Pravý Blok-str.za ODVOLATELNOST politiků,REFERENDA",
+        slate == "PaS" ~ "Právo a Spravedlnost-ANO rodině,NE korupci a krim.",
+        slate == "SNK ED" ~ "SNK Evropští demokraté" ,
+        slate == "SRS" ~ "STRANA ROVNOST ŠANCÍ",
+        slate == "SZ" ~ "Strana zelených",
+        slate == "SZR" ~ "Strana zdravého rozumu" ,
+        slate == "US-DEU" ~ "Unie svobody - Demokratická unie"
+      )) %>% 
+      rename(wcn_sk = wcn) %>% 
+      left_join(., wcn_2006)
+    
+    # plot(wcn_2006_comparison$wcn_sk, wcn_2006_comparison$wcn_cpcd)
+    cor(wcn_2006_comparison$wcn_sk, wcn_2006_comparison$wcn_cpcd)
+    
+    # 2002
+    new_candidates_2002 <- complete_panel2 %>% 
+      find_new_candidates(., "PSP 1998", "PSP 2002")
+    
+    w_new_candidates_2002 <- new_candidates_2002 %>% 
+      calculate_rankings()
+    
+    wcn_2002 <- w_new_candidates_2002 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn) %>% 
+      rename(wcn_cpcd = wcn)
+    
+    wcn_2002_comparison <- novelty_data %>% 
+      filter(year == 2002) %>% 
+      mutate(candidate_partyrun_fullname = case_when(
+        slate == "AZSD" ~ "Akce za zrušení Senátu a proti vytun.důchod.fondů",
+        slate == "BPS" ~ "Balbínova poetická strana",
+        slate == "CP" ~ "Česká pravice",
+        slate == "CSDH" ~ "České sociálně demokratické hnutí",
+        slate == "CSNS" ~ "Česká strana národně sociální",
+        slate == "CSSD" ~ "Česká strana sociálně demokratická",
+        slate == "CZ" ~ "Cesta změny",
+        slate == "DL" ~ "Demokratická liga",
+        slate == "H.A." ~ "Humanistická aliance",
+        slate == "KDU-CSL" ~ "Koalice KDU-ČSL, US-DEU",
+        slate == "KSCM" ~ "Komunistická strana Čech a Moravy",
+        slate == "MoDS" ~ "Moravská demokratická strana",
+        slate == "N" ~ "Naděje",
+        slate == "NDS" ~ "Národně demokratická strana",
+        slate == "NH" ~ "Nové hnutí",
+        slate == "ODA" ~ "Občanská demokratická aliance",
+        slate == "ODS" ~ "Občanská demokratická strana",
+        slate == "PB" ~ "Pravý Blok",
+        slate == "REP" ~ "Republikáni",
+        slate == "RMS" ~ "Republikáni Miroslava Sládka",
+        slate == "ROI" ~ "Romská občanská iniciativa ČR",
+        slate == "SDS" ~ "Strana demokratického socialismu",
+        slate == "SNK" ~ "Sdružení nezávislých",
+        slate == "SV SOS" ~ "Strana venkova - spojené občanské síly",
+        slate == "SZ" ~ "Strana zelených",
+        slate == "SZJ" ~ "Strana za životní jistoty",
+        slate == "SZR" ~ "Strana zdravého rozumu",
+        slate == "VPB" ~ "Volba pro budoucnost"
+      )) %>% 
+      rename(wcn_sk = wcn) %>% 
+      left_join(., wcn_2002)
+    
+    # plot(wcn_2002_comparison$wcn_sk, wcn_2002_comparison$wcn_cpcd)
+    cor(wcn_2002_comparison$wcn_sk, wcn_2002_comparison$wcn_cpcd)
+    
+    # 1998
+    new_candidates_1998 <- complete_panel2 %>% 
+      find_new_candidates(., "PSP 1996", "PSP 1998")
+    
+    w_new_candidates_1998 <- new_candidates_1998 %>% 
+      calculate_rankings()
+    
+    wcn_1998 <- w_new_candidates_1998 %>% 
+      group_by(candidate_partyrun_fullname) %>% 
+      summarise(wcn = Hmisc::wtd.mean(new_candidate, w = w)) %>% 
+      arrange(wcn) %>% 
+      rename(wcn_cpcd = wcn)
+    
+    wcn_1998_comparison <- novelty_data %>% 
+      filter(year == 1998) %>% 
+      mutate(candidate_partyrun_fullname = case_when(
+        slate == "A2001" ~ "Alternativa 2000",
+        slate == "CAO" ~ "Celostátní aktiv občanů",
+        slate == "CSNS" ~ "Česká strana národně sociální",
+        slate == "CSSD" ~ "Česká str.sociálně demokrat.",
+        slate == "DEU" ~ "Demokratická unie",
+        slate == "DZJ" ~ "Důchodci za životní jistoty",
+        slate == "KDU-CSL" ~ "Křesť.demokr.unie-Čs.str.lid.",
+        slate == "KSCM" ~ "Komunistická str.Čech a Moravy",
+        slate == "MODS" ~ "Moravská demokratická strana",
+        slate == "NEZ" ~ "Nezávislí",
+        slate == "ODA" ~ "Občanská demokratická aliance",
+        slate == "ODS" ~ "Občanská demokratická strana",
+        slate == "OK" ~ "Občanská koalice-Politic.klub",
+        slate == "PB" ~ "Pravý blok",
+        slate == "SDCR" ~ "Sdružení důchodců ČR",
+        slate == "SPR-RSC" ~ "Sdruž.pro rep.-Republ.str.Čsl.",
+        slate == "SZ" ~ "Strana zelených",
+        slate == "US" ~ "Unie svobody"
+      )) %>% 
+      rename(wcn_sk = wcn) %>% 
+      left_join(., wcn_1998)
     
     bind_rows(
-      wcn_2006 %>% mutate(year = 2006),
-      wcn_2010 %>% mutate(year = 2010),
-      wcn_2013 %>% mutate(year = 2013),
-      wcn_2017 %>% mutate(year = 2017),
-      wcn_2021 %>% mutate(year = 2021)
+      wcn_1998_comparison,
+      wcn_2002_comparison,
+      wcn_2006_comparison,
+      wcn_2010_comparison,
+      wcn_2013_comparison
+    ) %>% 
+      select(year, candidate_partyrun_fullname, slate, wcn_sk, wcn_cpcd)
+  }), 
+  
+  tar_target(sikk_koker_wcn_cor_tab, {
+    
+    tibble(
+      years = c(1998, 2002, 2006, 2010, 2013),
+      r = c(
+        round(correlate_year(sikk_koker_wcn, 1998), 2),
+        round(correlate_year(sikk_koker_wcn, 2002), 2),
+        round(correlate_year(sikk_koker_wcn, 2006), 2),
+        round(correlate_year(sikk_koker_wcn, 2010), 2),
+        round(correlate_year(sikk_koker_wcn, 2013), 2)
+      ), 
+      rmse = c(
+        round(rmse_year(sikk_koker_wcn, 1998), 2),
+        round(rmse_year(sikk_koker_wcn, 2002), 2),
+        round(rmse_year(sikk_koker_wcn, 2006), 2),
+        round(rmse_year(sikk_koker_wcn, 2010), 2),
+        round(rmse_year(sikk_koker_wcn, 2013), 2)
+      )
     )
+  }), 
+  
+  tar_target(sikk_koker_wcn_tab_tex, {
+    knitr::kable(sikk_koker_wcn %>% select(-candidate_partyrun_fullname), 
+                 col.names = c("Year", "Party", "WCN (Sikk & Köker)", 
+                               "WCN (CPCD)"), 
+                 digits = 2,
+                 format = "latex") %>% 
+      writeLines(., "figs/wcn_tab.tex")
+  }),
+  
+  tar_target(sikk_koker_wcn_cor_tab_tex, {
+    knitr::kable(sikk_koker_wcn_cor_tab, 
+                 col.names = c("Election year", "r", "RMSE"), 
+                 format = "latex") %>% 
+      writeLines(., "figs/wcn_validation.tex")
+  }), 
+  
+  tar_target(comepelda_validation, {
+    da <- read.csv(file="validation_data/comepelda/COMEPELDA_aggregate_v1.00.csv",
+                   header=TRUE, encoding = "UTF-8", na.strings=".")
+    dc <- read.csv(file="validation_data/comepelda/COMEPELDA_candidates_v1.00.csv",
+                   header=TRUE, encoding = "UTF-8", na.strings=".") %>% 
+      filter(cName == "Czech Republic") %>% 
+      mutate(PrefVot = as.numeric(PrefVot))
+    
+    cz_comepelda <- merge(dc,
+                          da[,c("IDAD","pName")],
+                          by = "IDAD",
+                          all.x=TRUE) %>% 
+      select(ElYear, pName, Name, ListRankSel, PrefVot, Elected01) %>% 
+      arrange(ElYear, pName, ListRankSel) %>% 
+      mutate(pName2 = case_when(
+        pName == "Komunistická strana Cech a Moravy" ~ "Komunistická strana Čech a Moravy",
+        pName == "Křesťanská a demokratická unie – Československá strana lidová" ~ "Křesťan.a demokrat.unie-Českosl.strana lidová",
+        pName == "Nezávislí" ~ "NEZÁVISLÍ",
+        pName == "Občanská demokratická strana" ~ "Občanská demokratická strana",
+        pName == "SNK Evropští demokraté" & ElYear == 2009 ~ "SNK Evropští demokraté",
+        pName == "SNK Evropští demokraté" & ElYear == 2004 ~ "SNK sdružení nezávislých a Evropští demokraté",
+        pName == "Unie svobody " ~ "Unie liberálních demokratů",
+        pName == "Česká strana sociálně demokratická" ~ "Česká strana sociálně demokratická",
+        pName == "Evropská demokratická strana" ~ "Evropská demokratická strana",
+        pName == "Libertas.cz" ~ "Libertas.cz",
+        pName ==  "Starostové a nezávislí" ~ "\"STAROSTOVÉ A NEZÁVISLÍ - VAŠE ALTERNATIVA\"",
+        pName ==  "Suverenita – blok Jany Bobošíkové" ~ "Suverenita",
+        pName ==  "Akce nespokojených občanů" ~ "ANO 2011",
+        pName ==  "Strana svobodných občanů" ~ "Strana svobodných občanů",
+        pName ==  "Tradice Odpovědnost Prosperita 09" ~ "Koalice TOP 09 a STAN"
+      ))
+    
+    ep_data <- complete_panel %>% 
+      filter(election_type == "European Parliament") %>% 
+      filter(election_year %in% cz_comepelda$ElYear)
+    
+    n_candidates <- left_join(
+      cz_comepelda %>% count(ElYear, pName2) %>% 
+        rename(n_comepelda = n),
+      ep_data %>% count(election_year, candidate_partyrun_fullname) %>% 
+        rename(n_cpcd = n), 
+      by = c("ElYear"="election_year", "pName2"="candidate_partyrun_fullname")
+    )
+    
+    stopifnot(all(n_candidates$n_comepelda == n_candidates$n_cpcd))
+    
+    matched_candidates <- left_join(
+      cz_comepelda %>% select(ElYear, pName2, Name, ListRankSel, PrefVot, Elected01),
+      ep_data %>% select(election_year, candidate_partyrun_fullname, candidate_ranking, 
+                         candidate_name, candidate_surname, candidate_voteN, 
+                         candidate_seat, candidate_validity), 
+      by = c("ElYear"="election_year", "pName2"="candidate_partyrun_fullname", 
+             "ListRankSel"="candidate_ranking")
+    ) %>% filter(candidate_validity == 0)
+    
+    stopifnot(all(matched_candidates$PrefVot == matched_candidates$candidate_voteN))  
+    stopifnot(all(matched_candidates$Elected01 == matched_candidates$candidate_seat))  
+      
   })
 )
 
@@ -4687,20 +5573,26 @@ summary_stats <- list(
     bind_rows(
       psp_panel %>% 
         mutate(election_year = paste0("PS ", election_year)) %>% 
+        filter(candidate_validity == 0) %>% 
         summarise_election(),
       reg_panel %>% 
+        filter(candidate_validity == 0) %>% 
         mutate(election_year = paste0("Reg. ", election_year)) %>% 
         summarise_election(),
       ep_panel %>% 
+        filter(candidate_validity == 0) %>% 
         mutate(election_year = paste0("EP ", election_year)) %>% 
         summarise_election(), 
       m_panel %>% 
+        filter(candidate_validity == 0) %>% 
         mutate(election_year = paste0("Municipal ", election_year)) %>% 
         summarise_election(), 
       mc_panel %>% 
+        filter(candidate_validity == 0) %>% 
         mutate(election_year = paste0("City districts ", election_year)) %>% 
         summarise_election,
       sen_panel %>% 
+        filter(candidate_validity == 0) %>% 
         mutate(election_year = case_when(
           election_date %in% c(19961116, 19981114, 
                                20001112, 20021025,
@@ -4709,7 +5601,7 @@ summary_stats <- list(
                                20121012, 20141010, 
                                20161007, 20181005, 
                                20201002, 20220923) ~ paste0("Senate Election ", election_year), 
-          TRUE ~ paste0("Senate By-election ", election_year)
+          TRUE ~ "Senate By-elections"
         )) %>% 
         summarise_election()
     )
@@ -4719,11 +5611,16 @@ summary_stats <- list(
     writexl::write_xlsx(n_candidates, "figs/n_candidates.xlsx")
   }), 
   
+  tar_target(n_unique_candidates, {
+    length(unique(complete_panel$person_id))
+  }),
+  
   tar_target(n_candidates_tex, {
     knitr::kable(n_candidates, col.names = c("Election", "N of candidates", 
                                              "Female candidates", 
                                              "Elected candidates", 
-                                             "Elected female candidates"), 
+                                             "Elected female candidates", 
+                                             "% elected"), 
                  format = "latex") %>% 
       writeLines(., "figs/n_candidates.tex")
   })
