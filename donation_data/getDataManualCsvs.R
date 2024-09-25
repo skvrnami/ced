@@ -946,3 +946,4 @@ final_data=final_data %>% group_by(donation_party, donor_name, donor_lastname, d
 print(max(final_data$id_xx))
 ### unique party donors
 print(max(final_data$id_xx_donorParty))
+
