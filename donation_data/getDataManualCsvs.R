@@ -935,15 +935,9 @@ final_data <- merged_data %>%
             donation_financial = sum(donation_financial),
             donation_nonfinancial = sum(donation_nonfinancial))
 
+final_data=final_data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(person_id = cur_group_id())
+
 # Save
 saveRDS(final_data, "data/finalDataset.rds")
 
-####
-final_data=final_data %>% group_by(donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx = cur_group_id())
-final_data=final_data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(id_xx_donorParty = cur_group_id())
-
-### unique donors
-print(max(final_data$id_xx))
-### unique party donors
-print(max(final_data$id_xx_donorParty))
 
