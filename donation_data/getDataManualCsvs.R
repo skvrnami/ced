@@ -902,6 +902,12 @@ data_kdu_2021 = readRDS("primary_data_extracted/vfz2021-kducsl.rds")
 data_kdu_2021$donor_birthyear = as.numeric(data_kdu_2021$donor_birthyear)
 merged_data = rbind(merged_data,data_kdu_2021)
 
+### Trikolora
+#2021
+data_trikolora_2021 = readRDS("primary_data_extracted/vfz2021-trikolora.rds")
+data_trikolora_2021$donor_birthyear = as.numeric(data_trikolora_2021$donor_birthyear)
+merged_data = rbind(merged_data,data_trikolora_2021)
+
 ### SPD
 #2018
 data_spd_2018 = readRDS("primary_data_extracted/vfz2018-spd.rds")
@@ -957,4 +963,7 @@ print(max(final_data$id_xx))
 print(max(final_data$id_xx_donorParty))
 
 # Some stats
-final_data %>% group_by(donation_party, donation_year) %>% count(donation_party)
+summaryCounts=print.table(final_data %>% group_by(donation_party, donation_year) %>% count(donation_party))
+
+
+summarySums=print.table(final_data %>% group_by(donation_party, donation_year) %>% count(donation_party))

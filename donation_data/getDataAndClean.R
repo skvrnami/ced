@@ -36,7 +36,7 @@ for (p in polparty) {
   
   for (y in years) {
     
-    if (!(p == "ano" && y == "2020") && !(p == "ano" && y == "2021") && !(p == "kducsl" && y == "2021")  && !(p == "spd" && y == "2017")  && !(p == "spd" && y == "2018")  && !(p == "spd" && y == "2019")   && !(p == "spd" && y == "2020")  && !(p == "spd" && y == "2021")  && !(p == "spd" && y == "2022") && !(p == "spd" && y == "2023")&& !(p == "trikolora" && y == "2017")&& !(p == "trikolora" && y == "2018") && !(p == "trikolora" && y == "2021") && !(p == "prisaha" && y == "2017") && !(p == "prisaha" && y == "2018") && !(p == "prisaha" && y == "2019") && !(p == "prisaha" && y == "2020")){
+    if (!(p == "ano" && y == "2020") && !(p == "ano" && y == "2021") && !(p == "kducsl" && y == "2021") && !(p == "spd" && y == "2018")  && !(p == "spd" && y == "2019")   && !(p == "spd" && y == "2020")  && !(p == "spd" && y == "2021")  && !(p == "spd" && y == "2022") && !(p == "spd" && y == "2023")&& !(p == "trikolora" && y == "2017")&& !(p == "trikolora" && y == "2018") && !(p == "trikolora" && y == "2021") && !(p == "prisaha" && y == "2017") && !(p == "prisaha" && y == "2018") && !(p == "prisaha" && y == "2019") && !(p == "prisaha" && y == "2020")){
       dir.create(paste0("primary_data/oofppm/pp_", p, "/y_", y), showWarnings = FALSE)
       
       # Financial donations
@@ -137,7 +137,7 @@ for (p in polparty) {
                  TRUE ~ NA_real_
                ))
       
-      if (!(p == "ano" && y == "2020") && !(p == "ano" && y == "2021") && !(p == "kducsl" && y == "2021")  && !(p == "spd" && y == "2017")  && !(p == "spd" && y == "2018")  && !(p == "spd" && y == "2019")   && !(p == "spd" && y == "2020")  && !(p == "spd" && y == "2021")  && !(p == "spd" && y == "2022") && !(p == "spd" && y == "2023")&& !(p == "trikolora" && y == "2017")&& !(p == "trikolora" && y == "2018") && !(p == "trikolora" && y == "2021") && !(p == "prisaha" && y == "2017") && !(p == "prisaha" && y == "2018") && !(p == "prisaha" && y == "2019") && !(p == "prisaha" && y == "2020")){
+      if (!(p == "ano" && y == "2020") && !(p == "ano" && y == "2021") && !(p == "kducsl" && y == "2021")  && !(p == "spd" && y == "2018")  && !(p == "spd" && y == "2019")   && !(p == "spd" && y == "2020")  && !(p == "spd" && y == "2021")  && !(p == "spd" && y == "2022") && !(p == "spd" && y == "2023")&& !(p == "trikolora" && y == "2017")&& !(p == "trikolora" && y == "2018") && !(p == "trikolora" && y == "2021") && !(p == "prisaha" && y == "2017") && !(p == "prisaha" && y == "2018") && !(p == "prisaha" && y == "2019") && !(p == "prisaha" && y == "2020")){
         if (file.exists(financialData)) {
           df_old <- readRDS(financialData)
         }
@@ -170,7 +170,7 @@ for (p in polparty) {
                  TRUE ~ NA_real_
                ))
       
-      if (!(p == "ano" && y == "2020") && !(p == "ano" && y == "2021") && !(p == "kducsl" && y == "2021")  && !(p == "spd" && y == "2017")  && !(p == "spd" && y == "2018")  && !(p == "spd" && y == "2019")   && !(p == "spd" && y == "2020")  && !(p == "spd" && y == "2021")  && !(p == "spd" && y == "2022") && !(p == "spd" && y == "2023")&& !(p == "trikolora" && y == "2017")&& !(p == "trikolora" && y == "2018") && !(p == "trikolora" && y == "2021") && !(p == "prisaha" && y == "2017") && !(p == "prisaha" && y == "2018") && !(p == "prisaha" && y == "2019") && !(p == "prisaha" && y == "2020")){
+      if (!(p == "ano" && y == "2020") && !(p == "ano" && y == "2021") && !(p == "kducsl" && y == "2021")  && !(p == "spd" && y == "2018")  && !(p == "spd" && y == "2019")   && !(p == "spd" && y == "2020")  && !(p == "spd" && y == "2021")  && !(p == "spd" && y == "2022") && !(p == "spd" && y == "2023")&& !(p == "trikolora" && y == "2017")&& !(p == "trikolora" && y == "2018") && !(p == "trikolora" && y == "2021") && !(p == "prisaha" && y == "2017") && !(p == "prisaha" && y == "2018") && !(p == "prisaha" && y == "2019") && !(p == "prisaha" && y == "2020")){
         if (file.exists(nonFinancialData)) {
           df_old_nonfinancial <- readRDS(nonFinancialData)
         }
