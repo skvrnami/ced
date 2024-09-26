@@ -1,4 +1,4 @@
-
+rm(list=ls())
 # Set working directory
 setwd("/Users/vtitl/Documents/GitHub/ced/donation_data/")
 
@@ -863,7 +863,8 @@ data <- data %>%
             polparty = ifelse(polparty == "cssd", "CSSD", polparty),
             polparty = ifelse(polparty == "svobodni", "Svobodni", polparty),
             polparty = ifelse(polparty == "trikolora", "Trikolora", polparty),
-            polparty = ifelse(polparty == "prisaha", "Prisaha", polparty)
+            polparty = ifelse(polparty == "prisaha", "Prisaha", polparty),
+            polparty = ifelse(polparty == "ods", "ODS", polparty)
                        )
 
 data$donation_source = 1
@@ -936,6 +937,9 @@ final_data <- merged_data %>%
             donation_nonfinancial = sum(donation_nonfinancial))
 
 final_data=final_data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(person_id = cur_group_id())
+
+
+
 
 # Save
 saveRDS(final_data, "data/finalDataset.rds")

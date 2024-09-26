@@ -1,3 +1,4 @@
+rm(list=ls())
 #install.packages("readxl")
 #install.packages("writexl")
 #install.packages("dplyr")
@@ -199,7 +200,24 @@ for (d in donationform) {
   # Define the polparty variable as a factor with labels
   #data <- data %>%
   #  mutate(polparty = factor(polparty, levels = 1:12, labels = polparty))
-  data$polparty=factor(data$polparty, levels = 1:12, labels = polparty)
+  #data$polparty
+  #ata$polparty=factor(data$polparty, labels = polparty, levels = 1:12
+  data <- data %>%
+    mutate(polparty = case_when(
+      polparty == 1 ~ "kducsl",
+      polparty == 2 ~ "kscm",
+      polparty == 3 ~ "ods",
+      polparty == 4 ~ "pirati",
+      polparty == 5 ~ "spd",
+      polparty == 6 ~ "stan",
+      polparty == 7 ~ "top09",
+      polparty == 8 ~ "ano",
+      polparty == 9 ~ "cssd",
+      polparty == 10 ~ "svobodni",
+      polparty == 11 ~ "trikolora",
+      polparty == 12 ~ "prisaha",
+      TRUE ~ NA_character_
+    ))             
   
   # Sort data
   data <- data %>%
@@ -892,7 +910,7 @@ for (d in donationform) {
       surname = ifelse(surname == "Urtešlégr", "Uretšlégr", surname),
       surname = ifelse(surname == "Valencikova", "Valenčíková", surname),
       surname = ifelse(surname == "Volemanova", "Volemanová", surname),
-      surname = ifelse(surname == "Wageknecht" & polparty == 4, "Wagenknecht", surname),
+      surname = ifelse(surname == "Wageknecht" & polparty == "pirati", "Wagenknecht", surname),
       firstname = ifelse(firstname == "David František", "David", firstname),
       surname = ifelse(surname == "Wirthova", "Wirthová", surname),
       surname = ifelse(surname == "Zahumenska", "Zahumenská", surname),
