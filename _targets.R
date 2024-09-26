@@ -4980,7 +4980,7 @@ matched_panels <- list(
 donations <- list(
   tar_target(
     donations_data, 
-    readRDS("donation_data/data/finalDataset.rds")
+    readRDS(here("donation_data", "data", "finalDataset.rds"))
   ), 
   
   tar_target(
@@ -5004,7 +5004,7 @@ donations <- list(
       donations_data_harm <- donations_data %>% 
         rename(
           name = donor_name, 
-          surname = donor_lastname,
+          surname = donor_surname,
           birthyear = donor_birthyear,
           party = donation_party
         ) %>% 
@@ -5014,7 +5014,7 @@ donations <- list(
             party == "CSSD" ~ "ČSSD",
             party == "KDU-CSL" ~ "KDU-ČSL",
             party == "KSCM" ~ "KSČM",
-            party == "Prisaha" ~ "Přísaha",
+            party == "Prisaha" ~ "PŘÍSAHA",
             party == "Svobodni" ~ "Svobodní",
             party == "TOP09" ~ "TOP 09",
             party == "ods" ~ "ODS", 
@@ -5022,6 +5022,11 @@ donations <- list(
             TRUE ~ party
           )
         )
+      
+      stopifnot(
+        all(unique(donations_data_harm$party) %in% 
+              unique(complete_panel_harm$party))
+      )
       
       matched_donor <- match_donor_data(donations_data_harm, complete_panel_harm, 
                                         c("name", "surname", "party"))
@@ -5060,6 +5065,25 @@ donations <- list(
         )
     }
   ), 
+  
+  tar_target(
+    donations_by_candidates, {
+      pct_donations <- donations_matched %>% 
+        mutate(is_candidate = grepl("PE", person_id)) %>% 
+        summarise(pct_donations = mean(is_candidate))
+      
+      pct_value <- donations_matched %>% 
+        mutate(is_candidate = grepl("PE", person_id)) %>% 
+        group_by(is_candidate) %>% 
+        summarise(total = sum(donation_all)) %>% 
+        ungroup %>% 
+        mutate(pct = total / sum(total) * 100) %>% 
+        filter(is_candidate) %>% 
+        select(pct_value = pct)
+      
+      bind_cols(pct_donations, pct_value)
+    }
+  ),
   
   tar_target(
     donations_matched_rds, 
