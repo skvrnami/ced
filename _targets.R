@@ -4980,7 +4980,10 @@ matched_panels <- list(
 donations <- list(
   tar_target(
     donations_data, 
-    readRDS(here("donation_data", "data", "finalDataset.rds"))
+    readRDS(
+      "donation_data/data/finalDataset.rds"
+      # here("donation_data", "data", "finalDataset.rds")
+    )
   ), 
   
   tar_target(
