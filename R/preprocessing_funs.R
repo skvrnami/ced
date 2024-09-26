@@ -1262,6 +1262,42 @@ match_psp_sen_panel <- function(d1, d2, multiple_last_names, blocking_vars = c("
   bind_rows(linked_mn, linked_others)
 }
 
+cmp_distance_within_1 <- function(){
+  function(x, y){
+    diff <- abs(x-y)
+    ifelse(
+      diff > 1, 0, 1 - (abs(x-y)/2)
+    )
+  }
+}
+
+match_donor_data <- function(d1, d2, 
+                             blocking_vars = c("name", "surname")){
+  comparing_vars <- c("name", "surname", "birthyear", "party")
+  w1_scores <-c(name = 2, surname = 2, birthyear = 2, 
+                party = 1)
+  w0_scores <- c(name = -5, surname = -5, birthyear = -2,
+                 party = 0)
+  
+  # link the rest
+  pairs <- pair_blocking(d1, d2, blocking_vars)
+  pairs <- compare_pairs(pairs, on = comparing_vars, 
+                         comparators = list(
+                           birthyear = cmp_distance_within_1()
+                         ))
+  
+  scores <- score_simple(pairs, "score", 
+                         on = comparing_vars, 
+                         w1 = w1_scores,
+                         w0 = w0_scores, 
+                         wna = 0)
+  
+  selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
+  
+  link(selected_pairs_greedy, selection = "greedy")
+  
+}
+
 insert_nonconsecutive <- function(pivot_table, noncons, source, target){
   noncons <- as.data.frame(noncons) 
   pivot_table <- as.data.frame(pivot_table)

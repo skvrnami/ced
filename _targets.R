@@ -4976,6 +4976,51 @@ matched_panels <- list(
   )
 )
 
+# Donations data ------------------------------------------
+donations <- list(
+  tar_target(
+    donations_data, 
+    readRDS(here("donation_data", "data", "finalDataset.rds"))
+  ), 
+  
+  tar_target(
+    donations_matched, {
+      complete_panel_harm <- complete_panel %>% 
+        select(
+          person_id, 
+          name = candidate_name, 
+          surname = candidate_surname, 
+          birthyear = candidate_birthyear, 
+          party = candidate_partynom_name, 
+          everything()
+        )
+      
+      donations_data_harm <- donations_data %>% 
+        rename(
+          name = donor_name, 
+          surname = donor_lastname,
+          birthyear = donor_birthyear,
+          party = donation_party
+        ) %>% 
+        mutate(
+          party = case_when(
+            party == "ANO2011" ~ "ANO 2011",
+            party == "CSSD" ~ "ČSSD",
+            party == "KDU-CSL" ~ "KDU-ČSL",
+            party == "KSCM" ~ "KSČM",
+            party == "Prisaha" ~ "Přísaha",
+            party == "Svobodni" ~ "Svobodní",
+            party == "TOP09" ~ "TOP 09",
+            party == "ods" ~ "ODS", 
+            TRUE ~ party
+          )
+        )
+      
+      matched_donor <- match_donor_data(donations_data_harm, complete_panel_harm)
+    }
+  )
+)
+
 # Validations ---------------------------------------------
 validations <- list(
   tar_target(
@@ -5636,6 +5681,7 @@ list(
   all_data,
   matched_panels,
   summary_stats,
+  donations, 
   validations
 )
 
