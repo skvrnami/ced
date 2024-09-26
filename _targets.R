@@ -4980,7 +4980,7 @@ matched_panels <- list(
 donations <- list(
   tar_target(
     donations_data, 
-    readRDS(here("donation_data", "data", "finalDataset.rds"))
+    readRDS("donation_data/data/finalDataset.rds")
   ), 
   
   tar_target(
@@ -4993,6 +4993,12 @@ donations <- list(
           birthyear = candidate_birthyear, 
           party = candidate_partynom_name, 
           everything()
+        ) %>% 
+        mutate(
+          party = case_when(
+            party == "Trikolóra" ~ "Trikolora",
+            TRUE ~ party
+          )
         )
       
       donations_data_harm <- donations_data %>% 
@@ -5012,12 +5018,57 @@ donations <- list(
             party == "Svobodni" ~ "Svobodní",
             party == "TOP09" ~ "TOP 09",
             party == "ods" ~ "ODS", 
+            party == "Pirati" ~ "Piráti",
             TRUE ~ party
           )
         )
       
-      matched_donor <- match_donor_data(donations_data_harm, complete_panel_harm)
+      matched_donor <- match_donor_data(donations_data_harm, complete_panel_harm, 
+                                        c("name", "surname", "party"))
+      
+      pivot <- matched_donor %>% 
+        select(donor_person_id = person_id.x, 
+               candidate_person_id = person_id.y) %>% 
+        unique()
+      
+      pivot_unique <- pivot %>% 
+        group_by(donor_person_id) %>% 
+        mutate(donor_row = row_number()) %>% 
+        ungroup %>% 
+        group_by(candidate_person_id) %>% 
+        mutate(candidate_row = row_number()) %>% 
+        ungroup() %>% 
+        filter(candidate_row == 1 & donor_row == 1) %>% 
+        select(donor_person_id, candidate_person_id)
+      
+      donations_data_harm %>% 
+        left_join(., pivot_unique, by = c("person_id"="donor_person_id"), 
+                  relationship = "many-to-one") %>% 
+        rename(
+          donor_id = person_id,
+          donor_name = name,
+          donor_surname = surname, 
+          donor_birthyear = birthyear,
+          donation_party = party, 
+          person_id = candidate_person_id
+        ) %>% 
+        ungroup %>% 
+        mutate(
+          person_id = if_else(is.na(person_id), 
+                              paste0("D", donor_id), 
+                              person_id)
+        )
     }
+  ), 
+  
+  tar_target(
+    donations_matched_rds, 
+    saveRDS(donations_matched, "output/donation_data.rds")
+  ),
+  
+  tar_target(
+    donations_matched_csv, 
+    write.csv(donations_matched, "output/donation_data.csv", row.names = FALSE)
   )
 )
 
@@ -5658,6 +5709,13 @@ summary_stats <- list(
   
   tar_target(n_unique_candidates, {
     length(unique(complete_panel$person_id))
+  }),
+  
+  tar_target(n_unique_candidates_valid, {
+    complete_panel %>% 
+      filter(candidate_validity == 0) %>% 
+      pull(person_id) %>% unique() %>% 
+      length()
   }),
   
   tar_target(n_candidates_tex, {
