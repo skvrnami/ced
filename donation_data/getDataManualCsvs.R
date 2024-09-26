@@ -894,39 +894,39 @@ merged_data = rbind(data,data_ano_2020)
 # 2021
 data_ano_2021 = readRDS("primary_data_extracted/vfz2021-ano.rds")
 data_ano_2021$donor_birthyear = as.numeric(data_ano_2021$donor_birthyear)
-merged_data = rbind(data,data_ano_2021)
+merged_data = rbind(merged_data,data_ano_2021)
 
 ### KDUCSL
 #2021
 data_kdu_2021 = readRDS("primary_data_extracted/vfz2021-kducsl.rds")
 data_kdu_2021$donor_birthyear = as.numeric(data_kdu_2021$donor_birthyear)
-merged_data = rbind(data,data_kdu_2021)
+merged_data = rbind(merged_data,data_kdu_2021)
 
 ### SPD
 #2018
 data_spd_2018 = readRDS("primary_data_extracted/vfz2018-spd.rds")
 data_spd_2018$donor_birthyear = as.numeric(data_spd_2018$donor_birthyear)
-merged_data = rbind(data,data_spd_2018)
+merged_data = rbind(merged_data,data_spd_2018)
 #2019
 data_spd_2019 = readRDS("primary_data_extracted/vfz2019-spd.rds")
 data_spd_2019$donor_birthyear = as.numeric(data_spd_2019$donor_birthyear)
-merged_data = rbind(data,data_spd_2019)
+merged_data = rbind(merged_data,data_spd_2019)
 #2020
 data_spd_2020 = readRDS("primary_data_extracted/vfz2020-spd.rds")
 data_spd_2020$donor_birthyear = as.numeric(data_spd_2020$donor_birthyear)
-merged_data = rbind(data,data_spd_2020)
+merged_data = rbind(merged_data,data_spd_2020)
 #2021
 data_spd_2021 = readRDS("primary_data_extracted/vfz2021-spd.rds")
 data_spd_2021$donor_birthyear = as.numeric(data_spd_2021$donor_birthyear)
-merged_data = rbind(data,data_spd_2021)
+merged_data = rbind(merged_data,data_spd_2021)
 #2022
 data_spd_2022 = readRDS("primary_data_extracted/vfz2022-spd.rds")
 data_spd_2022$donor_birthyear = as.numeric(data_spd_2022$donor_birthyear)
-merged_data = rbind(data,data_spd_2022)
+merged_data = rbind(merged_data,data_spd_2022)
 #2023
 data_spd_2023 = readRDS("primary_data_extracted/vfz2023-spd.rds")
 data_spd_2023$donor_birthyear = as.numeric(data_spd_2023$donor_birthyear)
-merged_data = rbind(data,data_spd_2023)
+merged_data = rbind(merged_data,data_spd_2023)
 
 
 ### collapse and order
@@ -938,10 +938,23 @@ final_data <- merged_data %>%
 
 final_data=final_data %>% group_by(donation_party, donor_name, donor_lastname, donor_birthyear) %>% mutate(person_id = cur_group_id())
 
-
+final_data <- final_data %>%
+  rename(
+    donor_surname = donor_lastname
+  )
 
 
 # Save
 saveRDS(final_data, "data/finalDataset.rds")
 
 
+final_data=final_data %>% group_by(donor_name, donor_surname, donor_birthyear) %>% mutate(id_xx = cur_group_id())
+final_data=final_data %>% group_by(donation_party, donor_name, donor_surname, donor_birthyear) %>% mutate(id_xx_donorParty = cur_group_id())
+
+### unique donors
+print(max(final_data$id_xx))
+### unique party donors
+print(max(final_data$id_xx_donorParty))
+
+# Some stats
+final_data %>% group_by(donation_party, donation_year) %>% count(donation_party)
