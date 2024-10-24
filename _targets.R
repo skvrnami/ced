@@ -27,9 +27,10 @@ tar_source()
 # TODO: DiS. - https://cs.wikipedia.org/wiki/Diplomovan%C3%BD_specialista
 
 # Validace
-# TODO: Kouba & Lysek
 # TODO: Party people - připravit seznam kandidátů - noví, starí
 # TODO: validace? = https://programydovoleb.cz/lide/profil/731#data
+
+# TODO: dopočitat pořadí po preferenčním hlasování
 
 all_data <- list(
   tar_target(all_candidates, {
