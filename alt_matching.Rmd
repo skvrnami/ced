@@ -1,0 +1,134 @@
+---
+title: "alternative matching"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(Hmisc)
+library(targets)
+
+tar_load(m_panel)
+tar_load(alt_m_panel)
+```
+
+## Difference between used and alternative matching
+
+Alternative matching does not use surname as blocking variable and it enables different surnames (for all candidates without regard for their gender).
+Original matching produces `r length(unique(alt_m_panel$person_id))` unique persons, alternative matching `r length(unique(alt_m_panel$person_id))` (`r round(length(unique(alt_m_panel$person_id)) / length(unique(m_panel$person_id))*100, 2)` % of original number).
+
+```{r}
+m_panel_candidacies <- m_panel %>% 
+  count(person_id, candidate_gender) %>% 
+  rename(n_candidacies = n) %>% 
+  count(candidate_gender, n_candidacies) %>% 
+  group_by(candidate_gender) %>% 
+  mutate(pct = n / sum(n) * 100)
+
+alt_m_panel_candidacies <- alt_m_panel %>% 
+  count(person_id, candidate_gender) %>% 
+  rename(n_candidacies = n) %>% 
+  count(candidate_gender, n_candidacies) %>% 
+  group_by(candidate_gender) %>% 
+  mutate(pct = n / sum(n) * 100)
+
+
+full_join(
+  m_panel_candidacies %>% 
+  group_by(candidate_gender) %>% 
+  summarise(mean_candidacies = wtd.mean(n_candidacies, weights = n)),
+  alt_m_panel_candidacies %>% 
+  group_by(candidate_gender) %>% 
+  summarise(alt_mean_candidacies = wtd.mean(n_candidacies, weights = n)), 
+  by = "candidate_gender"
+) %>% 
+  mutate(diff = alt_mean_candidacies - mean_candidacies) %>% 
+  knitr::kable(., digits = 3, 
+               col.names = c("Gender", 
+                             "Průměrný počet kandidatur (původní matching)",
+                             "Průměrný počet kandidatur (alternativní matching)", 
+                             "Rozdíl"))
+
+
+```
+
+
+```{r}
+
+full_join(m_panel_candidacies %>% select(candidate_gender, n_candidacies, pct_old = pct), 
+          alt_m_panel_candidacies %>% select(candidate_gender, n_candidacies, 
+                                             pct_alt = pct), 
+          by = c("candidate_gender", "n_candidacies")) %>% 
+  mutate(diff_pp = pct_alt - pct_old) %>% 
+  knitr::kable(., col.names = c("Gender", "N candidacies/person", "% persons (used matching)", "% persons (alt. matching)", "Difference"),
+               digits = 3)
+
+```
+
+
+###
+```{r}
+m_panel2 <- m_panel %>% 
+  mutate(candidate_gender2 = case_when(
+    candidate_gender == "female" & candidate_age <= 50 ~ "female, under 50", 
+    candidate_gender == "female" ~ "female, above 50",
+    TRUE ~ "male"
+  ))
+
+alt_m_panel2 <- alt_m_panel %>% 
+  mutate(candidate_gender2 = case_when(
+    candidate_gender == "female" & candidate_age <= 50 ~ "female, under 50", 
+    candidate_gender == "female" ~ "female, above 50",
+    TRUE ~ "male"
+  ))
+
+m_panel_candidacies <- m_panel2 %>% 
+  count(person_id, candidate_gender2) %>% 
+  rename(n_candidacies = n) %>% 
+  count(candidate_gender2, n_candidacies) %>% 
+  group_by(candidate_gender2) %>% 
+  mutate(pct = n / sum(n) * 100)
+
+alt_m_panel_candidacies <- alt_m_panel2 %>% 
+  count(person_id, candidate_gender2) %>% 
+  rename(n_candidacies = n) %>% 
+  count(candidate_gender2, n_candidacies) %>% 
+  group_by(candidate_gender2) %>% 
+  mutate(pct = n / sum(n) * 100)
+
+full_join(m_panel_candidacies %>% select(candidate_gender2, n_candidacies, pct_old = pct), 
+          alt_m_panel_candidacies %>% select(candidate_gender2, n_candidacies, 
+                                             pct_alt = pct), 
+          by = c("candidate_gender2", "n_candidacies")) %>% 
+  mutate(diff_pp = pct_alt - pct_old) %>% 
+  knitr::kable(., col.names = c("Gender", "N candidacies/person", "% persons (used matching)", "% persons (alt. matching)", "Difference"),
+               digits = 3)
+
+```
+
+```{r}
+full_join(
+  m_panel2 %>% 
+  count(person_id, candidate_gender2) %>% 
+  rename(n_candidacies = n) %>% 
+  count(candidate_gender2, n_candidacies) %>% 
+  group_by(candidate_gender2) %>% 
+  summarise(mean_candidacies_old = wtd.mean(n_candidacies, weights = n)), 
+  alt_m_panel2 %>% 
+  count(person_id, candidate_gender2) %>% 
+  rename(n_candidacies = n) %>% 
+  count(candidate_gender2, n_candidacies) %>% 
+  group_by(candidate_gender2) %>% 
+  summarise(mean_candidacies_alt = wtd.mean(n_candidacies, weights = n)), 
+  by = "candidate_gender2"
+) %>% 
+  mutate(diff = mean_candidacies_alt - mean_candidacies_old) %>% 
+  knitr::kable(., col.names = c("Gender", "Mean candidacies (used matching)", 
+                                "Mean candidacies (alt. matching)", "Difference"), 
+               digits = 3)
+
+```
+

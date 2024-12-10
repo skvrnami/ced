@@ -565,7 +565,7 @@ match_data <- function(d1, d2, multiple_last_names,
 }
 
 match_reg_data <- function(d1, d2, multiple_last_names, 
-                           blocking_vars = c("candidate_name", "candidate_surname", "region_code")){
+                           blocking_vars = c("candidate_name", "candidate_surname", "region_id")){
   d1 <- d1 %>% 
     mutate(across(c(candidate_title_before, candidate_title_after), ~if_else(is.na(.x), "", .x)))
   d2 <- d2 %>% 
@@ -877,17 +877,17 @@ match_sen_data <- function(d1, d2, multiple_last_names,
                       "candidate_partymem_code", 
                       "candidate_partynom_code", 
                       "candidate_place_code", "candidate_occupation", 
-                      "senate_district")
+                      "senate_const_id")
   w1_scores <- c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                  candidate_title_before = 0.5, candidate_title_after = 0.5, 
                  candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
                  candidate_place_code = 0.5, candidate_occupation = 0.5, 
-                 senate_district = 2)
+                 senate_const_id = 2)
   w0_scores <- c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                  candidate_title_before = -0.5, candidate_title_after = -0.5, 
                  candidate_partymem_code = 0, candidate_partynom_code = 0, 
                  candidate_place_code = -0.5, candidate_occupation = 0, 
-                 senate_district = 0)
+                 senate_const_id = 0)
   
   # Link women with multiple names
   blocking_vars_wo_last_name <- blocking_vars[blocking_vars != "candidate_surname"]
@@ -937,7 +937,7 @@ match_sen_data <- function(d1, d2, multiple_last_names,
                                        "candidate_partymem_code", 
                                        "candidate_partynom_code", 
                                        "candidate_place_code", "candidate_occupation", 
-                                       "senate_district"), 
+                                       "senate_const_id"), 
                          comparators = list(
                            candidate_birthyear = cmp_within_1(),
                            candidate_occupation = cmp_jaccard()
@@ -949,17 +949,17 @@ match_sen_data <- function(d1, d2, multiple_last_names,
                          on = c("candidate_name", "candidate_surname", "candidate_birthyear", 
                                 "candidate_title_before", "candidate_title_after", "candidate_partymem_code", 
                                 "candidate_partynom_code", "candidate_place_code", "candidate_occupation", 
-                                "senate_district"), 
+                                "senate_const_id"), 
                          w1 = c(candidate_name = 2, candidate_surname = 2, candidate_birthyear = 2, 
                                 candidate_title_before = 0.5, candidate_title_after = 0.5, 
                                 candidate_partymem_code = 0.5, candidate_partynom_code = 0.5, 
                                 candidate_place_code = 0.5, candidate_occupation = 0.5, 
-                                senate_district = 2),
+                                senate_const_id = 2),
                          w0 = c(candidate_name = -5, candidate_surname = -5, candidate_birthyear = -5,
                                 candidate_title_before = -0.5, candidate_title_after = -0.5, 
                                 candidate_partymem_code = 0, candidate_partynom_code = 0, 
                                 candidate_place_code = -0.5, candidate_occupation = 0, 
-                                senate_district = 0), 
+                                senate_const_id = 0), 
                          wna = 0)
   
   selected_pairs_greedy <- select_greedy(scores, variable = "greedy", score = "score", threshold = 6)
@@ -1473,16 +1473,16 @@ rename_variables <- function(df){
     
     party_rank = "POR_STR_HL",
     
-    electoral_region = "VOLKRAJ",
+    chamber_const_id = "VOLKRAJ",
     region_name = "KRAJ_NAZEV",
     
-    region_code = "KRZAST",
+    region_id = "KRZAST",
     municipality_id = "KODZASTUP", 
     municipality_name = "KODZASTUP_NAZEV",
     municipality_type = "TYPZASTUP",
-    electoral_district_no = "COBVODU",
+    municipality_const_id = "COBVODU",
     
-    senate_district = "OBVOD",
+    senate_const_id = "OBVOD",
     senate_candidate_no = "CKAND"
   )
   
@@ -1524,7 +1524,7 @@ parse_kz_results <- function(html){
     x %>% 
       html_nodes("strana") %>% 
       parse_kz_hlasy_strana() %>% 
-      mutate(region_code = kraj)
+      mutate(region_id = kraj)
   })
 }
 
@@ -1552,7 +1552,7 @@ parse_ps_results <- function(html){
     x %>% 
       html_nodes("strana") %>% 
       parse_ps_hlasy_strana() %>% 
-      mutate(electoral_region = kraj)
+      mutate(chamber_const_id = kraj)
   })
 }
 
@@ -1594,14 +1594,14 @@ calculate_rankings <- function(df){
         TRUE ~ candidate_ranking
       )
     ) %>% 
-    group_by(electoral_region) %>% 
+    group_by(chamber_const_id) %>% 
     mutate(district_magnitude = sum(candidate_seat)) %>% 
     ungroup() %>% 
     # filter(candidate_ranking_final <= district_magnitude) %>% 
     mutate(r = (candidate_ranking_final - 1) / (district_magnitude - 1)) %>% 
     # mutate(rw = 1 / (1 + exp(25 * (r - (v_pct / 100))))) %>% 
     mutate(rw = 1 / (1 + exp(25 * (r - (party_voteP / 100))))) %>%
-    group_by(candidate_partyrun_fullname, electoral_region) %>% 
+    group_by(candidate_partyrun_fullname, chamber_const_id) %>% 
     mutate(w = rw / sum(rw)) %>% 
     select(r, rw, w, candidate_ranking_final, district_magnitude, everything())
 }

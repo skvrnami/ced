@@ -176,7 +176,7 @@ psp_data <- list(
       mutate(party_voteN = as.numeric(purrr::map_chr(party_voteN, remove_whitespace)), 
              party_voteP = as.numeric(party_voteP)) %>% 
       filter(!is.na(party_voteN)) %>% 
-      mutate(electoral_region = case_when(
+      mutate(chamber_const_id = case_when(
         kraj == "kraj_praha" ~ 3100, 
         kraj == "kraj_stredocesky" ~ 3200, 
         kraj == "kraj_jihocesky" ~ 3300, 
@@ -216,7 +216,7 @@ psp_data <- list(
       filter(PRIJMENI != "vytištěného HL") %>% 
       filter(JMENO != "Náprava chybně") %>% 
       rename_variables() %>% 
-      left_join(., ps_1996_results, by = c("electoral_region", "candidate_partyrun_fullname")) %>% 
+      left_join(., ps_1996_results, by = c("chamber_const_id", "candidate_partyrun_fullname")) %>% 
       mutate(candidate_voteN = if_else(candidate_validity == 1, 0, candidate_voteN)) %>% 
       mutate(
         party_voteN = if_else(is.na(party_voteN), 0, party_voteN), 
@@ -257,7 +257,7 @@ psp_data <- list(
       mutate(party_voteN = as.numeric(purrr::map_chr(party_voteN, remove_whitespace)), 
              party_voteP = as.numeric(party_voteP)) %>% 
       filter(!is.na(party_voteN)) %>% 
-      mutate(electoral_region = case_when(
+      mutate(chamber_const_id = case_when(
         kraj == "kraj_praha" ~ 3100, 
         kraj == "kraj_stredocesky" ~ 3200, 
         kraj == "kraj_jihocesky" ~ 3300, 
@@ -279,6 +279,8 @@ psp_data <- list(
       rename(VOLKRAJ = KRAJ) %>% 
       left_join(., kraje_do_2000, by = "VOLKRAJ") %>% 
       categorize_sex(., unique_first_names) %>% 
+      # these candidates have academic titles included in the variables 
+      # with their names (other have it in variables related to titles)
       mutate(
         TITULZA = case_when(
           PRIJMENI == "Kaňák CSc." ~ "CSc.", 
@@ -290,13 +292,25 @@ psp_data <- list(
           PRIJMENI == "Šindelářová CSc" ~ "Šindelářová",
           TRUE ~ PRIJMENI
         ), 
+        TITULPRED = case_when(
+          JMENO == "Ing. Alena" ~ "Ing.",
+          JMENO == "Mudr. Ivo" ~ "MUDr.",
+          JMENO == "Ing. Jan" ~ "Ing.", 
+          TRUE ~ TITULPRED
+        ),
+        JMENO = case_when(
+          JMENO == "Ing. Alena" ~ "Alena",
+          JMENO == "Mudr. Ivo" ~ "Ivo",
+          JMENO == "Ing. Jan" ~ "Jan", 
+          TRUE ~ JMENO
+        ),
         MANDAT = as.numeric(ZVOLEN1S != 0 | ZVOLEN2S != 0)
       ) %>% 
       select(-c(ZVOLEN1S, ZVOLEN2S)) %>% 
       merge_and_recode_titles %>% 
       filter(PRIJMENI != "HLASOVACÍHO LÍSTKU") %>% 
       rename_variables() %>% 
-      left_join(., ps_1998_results, by = c("electoral_region", "candidate_partyrun_fullname")) %>% 
+      left_join(., ps_1998_results, by = c("chamber_const_id", "candidate_partyrun_fullname")) %>% 
       mutate(candidate_voteN = if_else(candidate_validity == 1, 0, candidate_voteN)) %>% 
       mutate(
         party_voteN = if_else(is.na(party_voteN), 0, party_voteN), 
@@ -340,7 +354,7 @@ psp_data <- list(
       categorize_sex(., unique_first_names) %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("candidate_partyrun_code", "electoral_region")) %>% 
+      left_join(., ps_vysledky, by = c("candidate_partyrun_code", "chamber_const_id")) %>% 
       mutate(election_type = factor("Chamber of Deputies", 
                                     levels = c("Municipal", "City district",
                                                "Regional", "Chamber of Deputies",
@@ -363,7 +377,7 @@ psp_data <- list(
       categorize_sex(., unique_first_names) %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
+      left_join(., ps_vysledky, by = c("chamber_const_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Chamber of Deputies", 
                                     levels = c("Municipal", "City district",
@@ -388,7 +402,7 @@ psp_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
+      left_join(., ps_vysledky, by = c("chamber_const_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Chamber of Deputies", 
                                     levels = c("Municipal", "City district",
@@ -413,7 +427,7 @@ psp_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
+      left_join(., ps_vysledky, by = c("chamber_const_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Chamber of Deputies", 
                                     levels = c("Municipal", "City district",
@@ -439,7 +453,7 @@ psp_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(POCPROC, POHLAVI)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
+      left_join(., ps_vysledky, by = c("chamber_const_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Chamber of Deputies", 
                                     levels = c("Municipal", "City district",
@@ -464,7 +478,7 @@ psp_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(POHLAVI, SKRUTINIUM)) %>% 
       rename_variables() %>% 
-      left_join(., ps_vysledky, by = c("electoral_region", "candidate_partyrun_code"), 
+      left_join(., ps_vysledky, by = c("chamber_const_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Chamber of Deputies", 
                                     levels = c("Municipal", "City district",
@@ -909,7 +923,7 @@ reg_data <- list(
       categorize_sex(., unique_first_names) %>% 
       remove_order_from_last_name() %>% 
       select(-POCPROC) %>% rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code")) %>% 
+      left_join(., reg_vysledky, by = c("region_id", "candidate_partyrun_code")) %>% 
       mutate(election_type = factor("Regional", 
                                     levels = c("Municipal", "City district",
                                                "Regional", "Chamber of Deputies",
@@ -958,7 +972,7 @@ reg_data <- list(
       remove_order_from_last_name() %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code")) %>% 
+      left_join(., reg_vysledky, by = c("region_id", "candidate_partyrun_code")) %>% 
       mutate(election_type = factor("Regional", 
                                     levels = c("Municipal", "City district",
                                                "Regional", "Chamber of Deputies",
@@ -986,7 +1000,7 @@ reg_data <- list(
              PLATNOST = ifelse(PLATNOST == "A", 0, 1)) %>% 
       select(-c(POCPROC)) %>% 
       rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
+      left_join(., reg_vysledky, by = c("region_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Regional", 
                                     levels = c("Municipal", "City district",
@@ -1016,7 +1030,7 @@ reg_data <- list(
              PLATNOST = ifelse(PLATNOST == "A", 0, 1)) %>% 
       select(-c(POCPROC)) %>%
       rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
+      left_join(., reg_vysledky, by = c("region_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Regional", 
                                     levels = c("Municipal", "City district",
@@ -1042,7 +1056,7 @@ reg_data <- list(
       filter(JMENO != "Registrační úřad ponechal pozici volnou") %>% 
       select(-c(POCPROC, POHLAVI)) %>% 
       rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
+      left_join(., reg_vysledky, by = c("region_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Regional", 
                                     levels = c("Municipal", "City district",
@@ -1068,7 +1082,7 @@ reg_data <- list(
       remove_order_from_last_name() %>% 
       select(-c(POCPROC, POHLAVI)) %>% 
       rename_variables() %>% 
-      left_join(., reg_vysledky, by = c("region_code", "candidate_partyrun_code"), 
+      left_join(., reg_vysledky, by = c("region_id", "candidate_partyrun_code"), 
                 relationship = "many-to-one") %>% 
       mutate(election_type = factor("Regional", 
                                     levels = c("Municipal", "City district",
@@ -1325,16 +1339,16 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2) %>% 
                if_else(is.nan(.), 0, .)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>%
       mutate(
@@ -1379,16 +1393,16 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2) %>% 
                if_else(is.nan(.), 0, .)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% 
       mutate(election_date = as.Date("1998-11-13", format = "%Y-%m-%d"),
@@ -1477,15 +1491,15 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% 
       mutate(election_date = as.Date("2002-11-02", format = "%Y-%m-%d"))
@@ -1523,15 +1537,15 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% mutate(election_date = as.Date("2006-10-20", format = "%Y-%m-%d"), 
                  candidate_voteP = if_else(
@@ -1591,15 +1605,15 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% mutate(election_date = as.Date("2010-10-15", format = "%Y-%m-%d"), 
                  candidate_voteP = if_else(
@@ -1645,15 +1659,15 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% 
       mutate(election_date = as.Date("2014-10-10", format = "%Y-%m-%d"), 
@@ -1711,15 +1725,15 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% mutate(election_date = as.Date("2018-10-05", format = "%Y-%m-%d"))
   }), 
@@ -1780,15 +1794,15 @@ mun_data <- list(
       )
     
     party_results <- candidates %>% 
-      group_by(municipality_id, electoral_district_no, party_rank) %>% 
+      group_by(municipality_id, municipality_const_id, party_rank) %>% 
       summarise(party_voteN = sum(candidate_voteN)) %>% 
-      group_by(municipality_id, electoral_district_no) %>% 
+      group_by(municipality_id, municipality_const_id) %>% 
       mutate(party_voteP = round(party_voteN / sum(party_voteN) * 100, 2)) %>% 
       ungroup()
     
     left_join(
       candidates, party_results, 
-      by = c("municipality_id", "electoral_district_no", "party_rank"),
+      by = c("municipality_id", "municipality_const_id", "party_rank"),
       relationship = "many-to-one"
     ) %>% mutate(election_date = as.Date(as.character(election_date), "%Y%m%d"))
   }),
@@ -3012,9 +3026,9 @@ senate_data <- list(
     byelection_districts_unique, {
       stopifnot(senate_df %>% 
         filter(election_date %in% byelection_dates) %>% 
-        select(election_date, senate_district) %>% 
+        select(election_date, senate_const_id) %>% 
         unique() %>% 
-        count(senate_district, sort = TRUE) %>% 
+        count(senate_const_id, sort = TRUE) %>% 
         pull(n) %>% 
         all(. == 1))
     }
@@ -3041,7 +3055,7 @@ senate_data <- list(
     sen_1996a, {
       senate_df %>% 
         filter(election_date == "1996-11-16") %>% 
-        filter(senate_district %in% sen_1998$senate_district) %>% 
+        filter(senate_const_id %in% sen_1998$senate_const_id) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -3050,7 +3064,7 @@ senate_data <- list(
     sen_1996b, {
       senate_df %>% 
         filter(election_date == "1996-11-16") %>% 
-        filter(senate_district %in% sen_2000$senate_district) %>% 
+        filter(senate_const_id %in% sen_2000$senate_const_id) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -3059,7 +3073,7 @@ senate_data <- list(
     sen_1996c, {
       senate_df %>% 
         filter(election_date == "1996-11-16") %>% 
-        filter(senate_district %in% sen_2002$senate_district) %>% 
+        filter(senate_const_id %in% sen_2002$senate_const_id) %>% 
         mutate(row_id = row_number())
     }
   ),
@@ -4034,7 +4048,7 @@ matched_panels <- list(
         select(-person_id) %>% 
         rename(person_id = panel_id)
       reg_panel_harm <- reg_panel %>% 
-        left_join(., kraje, by = c("region_code"="KRZAST")) %>% 
+        left_join(., kraje, by = c("region_id"="KRZAST")) %>% 
         mutate(election = paste0("R", election_year))
       
       mun_reg_match <- match_mun_reg_panel(mun_panel_harm, reg_panel_harm, 
@@ -5304,7 +5318,7 @@ validations <- list(
       ))
     
     psp_seats <- psp_panel %>% 
-      group_by(election_year, electoral_region, region_name, 
+      group_by(election_year, chamber_const_id, region_name, 
                candidate_partyrun_fullname, candidate_partyrun_name) %>% 
       summarise(seats = sum(candidate_seat), .groups = "drop") %>% 
       filter(seats > 0) %>% 
